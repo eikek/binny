@@ -9,3 +9,24 @@
 
 
 Binny is a Scala library for dealing with files based on fs2/cats.
+
+## Motivation
+
+Many applications need to deal with some kind of files. There are
+maybe user files, temporary files, important documents etc and it's
+very often quite tedious to manage them. Many database systems are not
+made for storing large files, so people reach out to plain file
+systems, which have their own issues. There is some compromise to
+make. Either way, it often involves boilerplate code. Binny aims to
+make it a bit more convenient by providing a simple api for
+storing/retrieving files and a few implementations. The idea is to
+pick the storage backend that fits most, while user code deals only
+with a simplified api.
+
+The use cases it addresses are:
+
+1. Having some binary data, store it somewhere
+2. Having a reference, load it from somewhere
+
+One thing that is explicitly not a goal is searching for files by
+attributes. This should be handled by the application.

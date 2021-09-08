@@ -111,9 +111,43 @@ lazy val core = project
   .settings(scalafixSettings)
   .settings(
     name := "binny-core",
+    description := "The binny api",
     libraryDependencies ++=
       Dependencies.fs2
   )
+
+lazy val fs = project
+  .in(file("modules/fs"))
+  .settings(sharedSettings)
+  .settings(testSettings)
+  .settings(scalafixSettings)
+  .settings(
+    name := "binny-fs",
+    description := "An filesystem based implementation using java.nio.file."
+  )
+  .dependsOn(core)
+
+lazy val jdbc = project
+  .in(file("modules/jdbc"))
+  .settings(sharedSettings)
+  .settings(testSettings)
+  .settings(scalafixSettings)
+  .settings(
+    name := "binny-jdbc",
+    description := "Implementation backed by a SQL database using pure JDBC"
+  )
+  .dependsOn(core)
+
+lazy val s3 = project
+  .in(file("modules/s3"))
+  .settings(sharedSettings)
+  .settings(testSettings)
+  .settings(scalafixSettings)
+  .settings(
+    name := "binny-s3",
+    description := "Implementation using the S3 API"
+  )
+  .dependsOn(core)
 
 
 lazy val microsite = project
@@ -180,4 +214,4 @@ val root = project
     name := "binny-root",
     crossScalaVersions := Nil
   )
-  .aggregate(core)
+  .aggregate(core, fs, jdbc, s3)
