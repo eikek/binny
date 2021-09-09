@@ -48,7 +48,7 @@ val sharedSettings = Seq(
          )
        else
          Nil),
-  crossScalaVersions := Seq(scala212, scala213, scala3),
+  crossScalaVersions := Seq(scala213, scala3),
   Compile / console / scalacOptions := Seq(),
   licenses := Seq("MIT" -> url("http://spdx.org/licenses/MIT")),
   homepage := Some(url("https://github.com/eikek/binny")),
@@ -74,9 +74,9 @@ lazy val noPublish = Seq(
 )
 
 val testSettings = Seq(
-  libraryDependencies ++= (Dependencies.munit ++
-    Dependencies.logback ++
-    Dependencies.greenmail).map(_ % Test),
+  libraryDependencies ++=
+    (Dependencies.munit ++ Dependencies.munitCatsEffect ++ Dependencies.logback)
+      .map(_ % Test),
   testFrameworks += new TestFramework("munit.Framework")
 )
 
@@ -123,7 +123,9 @@ lazy val fs = project
   .settings(scalafixSettings)
   .settings(
     name := "binny-fs",
-    description := "An filesystem based implementation using java.nio.file."
+    description := "An filesystem based implementation using java.nio.file.",
+    libraryDependencies ++=
+      Dependencies.fs2io
   )
   .dependsOn(core)
 
@@ -134,7 +136,24 @@ lazy val jdbc = project
   .settings(scalafixSettings)
   .settings(
     name := "binny-jdbc",
-    description := "Implementation backed by a SQL database using pure JDBC"
+    description := "Implementation backed by a SQL database using pure JDBC",
+    libraryDependencies ++=
+      Dependencies.databases.map(_        % Test) ++
+        Dependencies.testContainers.map(_ % Test)
+  )
+  .dependsOn(core)
+
+lazy val pg = project
+  .in(file("modules/pg"))
+  .settings(sharedSettings)
+  .settings(testSettings)
+  .settings(scalafixSettings)
+  .settings(
+    name := "binny-pg",
+    description := "Implementation using PostgreSQLs LargeObject API",
+    libraryDependencies ++=
+      Dependencies.postgres ++
+        Dependencies.testContainers.map(_ % Test)
   )
   .dependsOn(core)
 
@@ -149,6 +168,18 @@ lazy val s3 = project
   )
   .dependsOn(core)
 
+lazy val tikaDetect = project
+  .in(file("modules/tika-detect"))
+  .settings(sharedSettings)
+  .settings(testSettings)
+  .settings(scalafixSettings)
+  .settings(
+    name := "binny-tika-detect",
+    description := "Detect content types using Apache Tika",
+    libraryDependencies ++=
+      Dependencies.tikaCore ++ Dependencies.icu4j
+  )
+  .dependsOn(core)
 
 lazy val microsite = project
   .in(file("modules/microsite"))
@@ -179,7 +210,7 @@ lazy val microsite = project
       "VERSION" -> latestRelease.value
     )
   )
-  .dependsOn(core % "compile->compile,test")
+  .dependsOn(core % "compile->compile,test", fs, jdbc, pg, s3, tikaDetect)
 
 lazy val readme = project
   .in(file("modules/readme"))
@@ -203,7 +234,7 @@ lazy val readme = project
     }
   )
   .dependsOn(
-    core   % "compile->compile;compile->test"
+    core % "compile->compile;compile->test"
   )
 
 val root = project
@@ -214,4 +245,4 @@ val root = project
     name := "binny-root",
     crossScalaVersions := Nil
   )
-  .aggregate(core, fs, jdbc, s3)
+  .aggregate(core, fs, jdbc, pg, s3, tikaDetect)

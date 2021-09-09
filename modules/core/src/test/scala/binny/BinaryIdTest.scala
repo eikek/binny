@@ -1,10 +1,10 @@
 package binny
 
-import munit._
 import cats.effect._
 import cats.effect.unsafe.implicits._
-import scodec.bits.ByteVector
 import fs2.Stream
+import munit._
+import scodec.bits.ByteVector
 
 class BinaryIdTest extends FunSuite {
 
@@ -15,10 +15,14 @@ class BinaryIdTest extends FunSuite {
   }
 
   test("random ids not empty") {
-    Stream.eval(BinaryId.random[IO])
-      .repeat.take(10)
+    Stream
+      .eval(BinaryId.random[IO])
+      .repeat
+      .take(10)
       .map(id => assert(id.id.nonEmpty))
-      .compile.drain.unsafeRunSync()
+      .compile
+      .drain
+      .unsafeRunSync()
   }
 
   test("can not construct empty ids") {
