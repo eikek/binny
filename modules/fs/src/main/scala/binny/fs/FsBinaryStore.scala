@@ -6,7 +6,7 @@ import binny.fs.FsStoreConfig.PathMapping
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
-import fs2.io.file.Path
+import fs2.io.file.{Files, Path}
 
 final class FsBinaryStore[F[_]: Async](
     val config: FsStoreConfig,
@@ -16,13 +16,16 @@ final class FsBinaryStore[F[_]: Async](
 
   def insertWith(data: BinaryData[F], hint: Hint): F[Unit] = {
     val target = config.getTarget(data.id)
-    val stored = data.bytes
-      .observe(Impl.write[F](target, config.overwriteMode))
+    val stored =
+      data.bytes.through(Impl.write[F](target, config.overwriteMode)).compile.drain
+    // tried with .observe to consume the stream once, but it took 5x longer
+    val attr = Files[F]
+      .readAll(target)
       .through(BinaryAttributes.compute(config.detect, hint))
       .compile
       .lastOrError
 
-    stored.flatMap(attrStore.saveAttr(data.id, _))
+    stored *> attr.flatMap(attrStore.saveAttr(data.id, _))
   }
 
   def load(id: BinaryId, range: ByteRange, chunkSize: Int): OptionT[F, BinaryData[F]] = {

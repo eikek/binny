@@ -77,7 +77,8 @@ val testSettings = Seq(
   libraryDependencies ++=
     (Dependencies.munit ++ Dependencies.munitCatsEffect ++ Dependencies.logback)
       .map(_ % Test),
-  testFrameworks += new TestFramework("munit.Framework")
+  Test / parallelExecution := false,
+  Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "-b")
 )
 
 val buildInfoSettings = Seq(
@@ -127,7 +128,7 @@ lazy val fs = project
     libraryDependencies ++=
       Dependencies.fs2io
   )
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val jdbc = project
   .in(file("modules/jdbc"))

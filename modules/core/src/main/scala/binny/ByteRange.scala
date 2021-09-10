@@ -15,4 +15,6 @@ object ByteRange {
     val asString = s"$offset,$length"
   }
 
+  def apply(offset: Long, length: Long): ByteRange =
+    Chunk(offset, length)
 }
