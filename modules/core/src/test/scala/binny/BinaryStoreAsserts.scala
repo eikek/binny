@@ -42,7 +42,6 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
         el = elOpt.getOrElse(sys.error("Binary not found"))
         elAttr <- el.computeAttributes(ContentTypeDetect.none, Hint.none)
         _ = self.assertEquals(elAttr.sha256, givenSha.toByteVector)
-        _ = println(s"${elAttr.sha256.toHex}")
       } yield ()
     }
 

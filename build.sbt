@@ -75,7 +75,7 @@ lazy val noPublish = Seq(
 
 val testSettings = Seq(
   libraryDependencies ++=
-    (Dependencies.munit ++ Dependencies.munitCatsEffect ++ Dependencies.logback)
+    (Dependencies.munit ++ Dependencies.munitCatsEffect ++ Dependencies.logback ++ Dependencies.loggingApi)
       .map(_ % Test),
   Test / parallelExecution := false,
   Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "-b")
@@ -142,7 +142,7 @@ lazy val jdbc = project
       Dependencies.databases.map(_        % Test) ++
         Dependencies.testContainers.map(_ % Test)
   )
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val pg = project
   .in(file("modules/pg"))
@@ -156,7 +156,7 @@ lazy val pg = project
       Dependencies.postgres ++
         Dependencies.testContainers.map(_ % Test)
   )
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val s3 = project
   .in(file("modules/s3"))
@@ -167,7 +167,7 @@ lazy val s3 = project
     name := "binny-s3",
     description := "Implementation using the S3 API"
   )
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val tikaDetect = project
   .in(file("modules/tika-detect"))
