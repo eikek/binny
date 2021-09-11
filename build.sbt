@@ -140,7 +140,8 @@ lazy val jdbc = project
     description := "Implementation backed by a SQL database using pure JDBC",
     libraryDependencies ++=
       Dependencies.databases.map(_        % Test) ++
-        Dependencies.testContainers.map(_ % Test)
+        Dependencies.testContainers.map(_ % Test),
+    addCompilerPlugin(Dependencies.kindProjectorPlugin)
   )
   .dependsOn(core % "compile->compile;test->test")
 

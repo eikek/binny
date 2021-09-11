@@ -1,5 +1,6 @@
 package binny
 
+import binny.util.Logger
 import cats.effect.kernel.Sync
 import org.log4s.{Logger => SLogger}
 

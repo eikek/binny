@@ -1,4 +1,4 @@
-package binny
+package binny.util
 
 import cats.Applicative
 

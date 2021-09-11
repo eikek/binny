@@ -1,5 +1,6 @@
 package binny.jdbc
 
+import binny.util.Logger
 import cats.effect._
 import org.h2.jdbcx.JdbcDataSource
 import org.mariadb.jdbc.MariaDbDataSource
@@ -43,7 +44,7 @@ final case class ConnectionConfig(
         sys.error(s"Unknown jdbc url: $url")
     }
 
-  def setup[F[_]: Sync](cfg: JdbcStoreConfig): F[Int] =
+  def setup[F[_]: Sync](cfg: JdbcStoreConfig)(implicit log: Logger[F]): F[Int] =
     dbms match {
       case "h2"         => DatabaseSetup.postgres(dataSource, cfg)
       case "mariadb"    => DatabaseSetup.mariadb(dataSource, cfg)

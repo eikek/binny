@@ -1,29 +1,31 @@
 package binny.jdbc
 
-import binny.BinaryId
+import binny.Log4sLogger
 import binny.jdbc.impl.DbRun
 import cats.effect._
 import munit.CatsEffectSuite
-import DbRun._
 import org.log4s.getLogger
+import binny.jdbc.impl.Implicits._
 
 import javax.sql.DataSource
 
-class DbRunTest extends CatsEffectSuite {
+class DbRunTest extends CatsEffectSuite with DbFixtures {
+  implicit private[this] val logger = Log4sLogger[IO](getLogger)
 
-  val config = JdbcStoreConfig.default
-  val dataSource: FunFixture[DataSource] = FunFixture(
-    setup = test => {
-      val ds = ConnectionConfig.h2Memory(test.name.replaceAll("\\s+", "_")).dataSource
-      getLogger.debug(s"Creating database tables for $config")
-      DatabaseSetup.postgres[IO](ds, config).unsafeRunSync()
-      ds
-    },
-    teardown = _ => ()
-  )
+  val config                             = JdbcStoreConfig.default
+  val dataSource: FunFixture[DataSource] = h2MemoryDataSource
 
   dataSource.test("exists query") { ds =>
-    val v = DbRun.exists(config.dataTable, BinaryId("test")).execute[IO](ds)
-    assertIO(v, false)
+    DatabaseSetup.run[IO](Dbms.PostgreSQL, ds, config).unsafeRunSync()
+    DbRun
+      .update[IO]("UPDATE file_chunk set file_id = ? where file_id = ?") { ps =>
+        ps.setString(1, "abc")
+        ps.setString(2, "def")
+      }
+      .execute(ds)
+      .unsafeRunSync()
+
+//    val v = DbRun.exists(config.dataTable, BinaryId("test")).execute[IO](ds)
+//    assertIO(v, false)
   }
 }

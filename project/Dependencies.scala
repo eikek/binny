@@ -14,6 +14,9 @@ object Dependencies {
   val testContainersVersion  = "0.39.7"
   val tikaVersion            = "2.1.0"
   val icu4jVersion           = "69.1"
+  val kindProjectorVersion    = "0.10.3"
+
+  val kindProjectorPlugin = "org.typelevel" %% "kind-projector" % kindProjectorVersion
 
   val icu4j = Seq(
     "com.ibm.icu" % "icu4j" % icu4jVersion

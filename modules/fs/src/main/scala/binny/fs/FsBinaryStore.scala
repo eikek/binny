@@ -3,6 +3,7 @@ package binny.fs
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.fs.FsStoreConfig.PathMapping
+import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
@@ -10,6 +11,7 @@ import fs2.io.file.{Files, Path}
 
 final class FsBinaryStore[F[_]: Async](
     val config: FsStoreConfig,
+    logger: Logger[F],
     attrStore: BinaryAttributeStore[F]
 ) extends BinaryStore[F]
     with ReadonlyAttributeStore[F] {
@@ -25,7 +27,13 @@ final class FsBinaryStore[F[_]: Async](
       .compile
       .lastOrError
 
-    stored *> attr.flatMap(attrStore.saveAttr(data.id, _))
+    for {
+      _ <- logger.debug(s"Insert file with id ${data.id.id}")
+      w <- Stopwatch.start[F]
+      _ <- stored
+      _ <- attr.flatMap(attrStore.saveAttr(data.id, _))
+      _ <- Stopwatch.show(w)(d => logger.debug(s"Inserted file ${data.id.id} in $d"))
+    } yield ()
   }
 
   def load(id: BinaryId, range: ByteRange, chunkSize: Int): OptionT[F, BinaryData[F]] = {
@@ -44,16 +52,16 @@ final class FsBinaryStore[F[_]: Async](
 
 object FsBinaryStore {
 
-  def apply[F[_]: Async](cfg: FsStoreConfig): FsBinaryStore[F] = {
+  def apply[F[_]: Async](logger: Logger[F], cfg: FsStoreConfig): FsBinaryStore[F] = {
     val attrStore = cfg.mapping match {
       case PathMapping.Basic =>
         BinaryAttributeStore.empty[F]
       case m: PathMapping.Subdir.type =>
         FsAttributeStore(id => m.attrFile(cfg.baseDir, id))
     }
-    new FsBinaryStore[F](cfg, attrStore)
+    new FsBinaryStore[F](cfg, logger, attrStore)
   }
 
-  def default[F[_]: Async](baseDir: Path): FsBinaryStore[F] =
-    apply(FsStoreConfig.default(baseDir))
+  def default[F[_]: Async](logger: Logger[F], baseDir: Path): FsBinaryStore[F] =
+    apply(logger, FsStoreConfig.default(baseDir))
 }
