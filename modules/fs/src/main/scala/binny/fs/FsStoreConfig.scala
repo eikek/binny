@@ -8,7 +8,8 @@ final case class FsStoreConfig(
     baseDir: Path,
     detect: ContentTypeDetect,
     overwriteMode: OverwriteMode,
-    mapping: PathMapping
+    mapping: PathMapping,
+    chunkSize: Int
 ) {
 
   private[fs] def getTarget(id: BinaryId): Path =
@@ -18,7 +19,7 @@ final case class FsStoreConfig(
 object FsStoreConfig {
 
   def default(baseDir: Path): FsStoreConfig =
-    FsStoreConfig(baseDir, ContentTypeDetect.none, OverwriteMode.Fail, PathMapping.Subdir)
+    FsStoreConfig(baseDir, ContentTypeDetect.none, OverwriteMode.Fail, PathMapping.Subdir, 100 * 1024)
 
   sealed trait OverwriteMode
   object OverwriteMode {

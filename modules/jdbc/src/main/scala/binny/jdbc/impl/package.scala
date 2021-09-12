@@ -9,6 +9,8 @@ import cats.data.Kleisli
 import cats.effect._
 import cats.implicits._
 
+import javax.sql.DataSource
+
 package object impl {
   type DbRun[F[_], A] = Kleisli[F, Connection, A]
   type DbRunIO[A]     = DbRun[IO, A]
@@ -26,6 +28,16 @@ package object impl {
     def delay[F[_]: Sync, A](f: Connection => A): DbRun[F, A] =
       DbRun(conn => Sync[F].blocking(f(conn)))
 
+    def fail[F[_]: Sync, A](ex: Throwable): DbRun[F, A] =
+      DbRun(_ => Sync[F].raiseError(ex))
+
+    def resource[F[_]: Sync, A](
+        acquire: Connection => A
+    )(release: A => Unit): DbRun[Resource[F, *], A] =
+      DbRun(conn =>
+        Resource.make(Sync[F].blocking(acquire(conn)))(a => Sync[F].blocking(release(a)))
+      )
+
     def setAutoCommit[F[_]: Sync](flag: Boolean): DbRun[F, Boolean] =
       delay { conn =>
         val old = conn.getAutoCommit
@@ -39,24 +51,56 @@ package object impl {
     def rollback[F[_]: Sync]: DbRun[F, Unit] =
       delay(_.rollback())
 
+    def makeTX[F[_]: Sync](implicit log: Logger[F]): DbRun[Resource[F, *], Unit] =
+      DbRun { conn =>
+        val autoCommit =
+          Resource.make(for {
+            c  <- Sync[F].delay(counter.getAndIncrement())
+            _  <- log.trace(s"Initiating transaction $c")
+            ac <- setAutoCommit(false).run(conn)
+          } yield ac)(ac => setAutoCommit(ac).run(conn).map(_ => ()))
+
+        val lastCommit =
+          Resource.makeCase(Sync[F].pure(())) {
+            case (_, Resource.ExitCase.Errored(ex)) =>
+              log.error(ex)(s"Error during transaction!") *>
+                rollback.run(conn)
+
+            case (_, Resource.ExitCase.Canceled) =>
+              log.info(s"Transaction cancelled!") *>
+                rollback.run(conn)
+
+            case (_, Resource.ExitCase.Succeeded) =>
+              log.trace(s"Transaction successful!") *>
+                commit.run(conn)
+          }
+
+        autoCommit.flatMap(_ => lastCommit)
+      }
+
+    def inTX[F[_]: Sync, A](dbr: DbRun[F, A])(implicit log: Logger[F]): DbRun[F, A] =
+      withResourceIn(makeTX[F])(_ => dbr)
+
+    def withResource[F[_]: Sync, A, B](dba: DbRun[Resource[F, *], A])(
+        f: A => F[B]
+    ): DbRun[F, B] =
+      dba.mapF(_.use(f))
+
+    def withResourceIn[F[_]: Sync, A, B](dba: DbRun[Resource[F, *], A])(
+        f: A => DbRun[F, B]
+    ): DbRun[F, B] =
+      DbRun(conn => dba.mapF(_.use(a => f(a).run(conn))).run(conn))
+
     def prepare[F[_]: Sync](
         sql: String
     )(implicit log: Logger[F]): DbRun[Resource[F, *], PreparedStatement] =
       DbRun(_ => Resource.eval(log.trace(s"Prepare statement: $sql"))) *>
-        DbRun(conn =>
-          Resource.make(Sync[F].blocking(conn.prepareStatement(sql)))(ps =>
-            Sync[F].blocking(ps.close())
-          )
-        )
+        DbRun.resource(_.prepareStatement(sql))(_.close())
 
     def executeQuery[F[_]: Sync](
         ps: PreparedStatement
     ): DbRun[Resource[F, *], ResultSet] =
-      DbRun(_ =>
-        Resource.make(Sync[F].blocking(ps.executeQuery()))(rs =>
-          Sync[F].blocking(rs.close())
-        )
-      )
+      DbRun.resource(_ => ps.executeQuery())(_.close())
 
     def executeUpdate[F[_]: Sync](ps: PreparedStatement): F[Int] =
       Sync[F].blocking(ps.executeUpdate())
@@ -91,45 +135,12 @@ package object impl {
           ps.executeUpdate()
         }
       )
+  }
 
-    def makeTX[F[_]: Sync](implicit log: Logger[F]): DbRun[Resource[F, *], Unit] =
-      DbRun { conn =>
-        val autoCommit =
-          Resource.make(for {
-            c  <- Sync[F].delay(counter.getAndIncrement())
-            _  <- log.trace(s"Initiating transaction $c")
-            ac <- setAutoCommit(false).run(conn)
-          } yield ac)(ac => setAutoCommit(ac).run(conn).map(_ => ()))
-
-        val lastCommit =
-          Resource.makeCase(Sync[F].pure(())) {
-            case (_, Resource.ExitCase.Errored(ex)) =>
-              log.error(ex)(s"Error during transaction!") *>
-                rollback.run(conn)
-
-            case (_, Resource.ExitCase.Canceled) =>
-              log.warn(s"Transaction cancelled!") *>
-                rollback.run(conn)
-
-            case (_, Resource.ExitCase.Succeeded) =>
-              log.trace(s"Transaction successful!") *>
-                commit.run(conn)
-          }
-
-        autoCommit.flatMap(_ => lastCommit)
-      }
-
-    def inTX[F[_]: Sync, A](dbr: DbRun[F, A])(implicit log: Logger[F]): DbRun[F, A] =
-      withResourceIn(makeTX[F])(_ => dbr)
-
-    def withResource[F[_]: Sync, A, B](dba: DbRun[Resource[F, *], A])(
-        f: A => F[B]
-    ): DbRun[F, B] =
-      dba.mapF(_.use(f))
-
-    def withResourceIn[F[_]: Sync, A, B](dba: DbRun[Resource[F, *], A])(
-        f: A => DbRun[F, B]
-    ): DbRun[F, B] =
-      DbRun(conn => dba.mapF(_.use(a => f(a).run(conn))).run(conn))
+  object DataSourceResource {
+    def apply[F[_]: Sync](ds: DataSource): Resource[F, Connection] =
+      Resource.make(Sync[F].blocking(ds.getConnection))(conn =>
+        Sync[F].blocking(conn.close())
+      )
   }
 }

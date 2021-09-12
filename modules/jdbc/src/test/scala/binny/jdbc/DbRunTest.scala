@@ -15,17 +15,50 @@ class DbRunTest extends CatsEffectSuite with DbFixtures {
   val config                             = JdbcStoreConfig.default
   val dataSource: FunFixture[DataSource] = h2MemoryDataSource
 
-  dataSource.test("exists query") { ds =>
+  dataSource.test("hasNext on empty table") { ds =>
     DatabaseSetup.runData[IO](Dbms.PostgreSQL, ds, "file_chunk").unsafeRunSync()
-    DbRun
-      .update[IO]("UPDATE file_chunk set file_id = ? where file_id = ?") { ps =>
-        ps.setString(1, "abc")
-        ps.setString(2, "def")
-      }
+    val v = DbRun
+      .query[IO]("SELECT * FROM file_chunk")(_ => ())
+      .use(rs => DbRun.hasNext[IO](rs))
       .execute(ds)
-      .unsafeRunSync()
+    assertIO(v, false)
+  }
 
-//    val v = DbRun.exists(config.dataTable, BinaryId("test")).execute[IO](ds)
-//    assertIO(v, false)
+  dataSource.test("hasNext on non-empty table") { ds =>
+    val v =
+      for {
+        _ <- DatabaseSetup.runAttr[IO](Dbms.PostgreSQL, ds, "attrs")
+        _ <- DbRun
+          .executeUpdate[IO](
+            "INSERT INTO attrs (file_id,sha256,content_type,length) VALUES ('a', 'b', 'c', 0)"
+          )
+          .execute(ds)
+        v <- DbRun
+          .query[IO]("SELECT * FROM attrs")(_ => ())
+          .use(rs => DbRun.hasNext[IO](rs))
+          .execute(ds)
+      } yield v
+    assertIO(v, true)
+  }
+
+  dataSource.test("tx rollback") { ds =>
+    val txBody = for {
+      _ <- DbRun
+        .executeUpdate[IO](
+          "INSERT INTO attrs (file_id,sha256,content_type,length) VALUES ('a', 'b', 'c', 0)"
+        )
+      _ <- DbRun.fail[IO, Unit](new Exception("Oops!"))
+    } yield ()
+
+    val v =
+      for {
+        _ <- DatabaseSetup.runAttr[IO](Dbms.PostgreSQL, ds, "attrs")
+        _ <- txBody.inTX.attempt.execute(ds)
+        v <- DbRun
+          .query[IO]("SELECT * FROM attrs")(_ => ())
+          .use(rs => DbRun.hasNext[IO](rs))
+          .execute(ds)
+      } yield v
+    assertIO(v, false)
   }
 }

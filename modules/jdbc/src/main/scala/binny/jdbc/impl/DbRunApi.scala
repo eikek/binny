@@ -1,15 +1,19 @@
 package binny.jdbc.impl
 
-import java.io.ByteArrayInputStream
+import binny.ContentTypeDetect.Hint
 
+import java.io.ByteArrayInputStream
 import binny.jdbc.impl.Implicits._
 import binny.util.Logger
-import binny.{BinaryAttributes, BinaryId, SimpleContentType}
+import binny.{BinaryAttributes, BinaryId, ContentTypeDetect, SimpleContentType}
 import cats.effect._
 import cats.implicits._
 import fs2.Chunk
 import fs2.Stream
 import scodec.bits.ByteVector
+
+import java.security.MessageDigest
+import scala.util.Using
 
 final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
   implicit private val log = logger
@@ -89,6 +93,36 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
         ps.setMaxRows(1)
       }
       .use(DbRun.readOpt[F, Chunk[Byte]](rs => Chunk.array(rs.getBytes(1))))
+
+  def computeAttr(
+      id: BinaryId,
+      detect: ContentTypeDetect,
+      hint: Hint
+  ): DbRun[F, BinaryAttributes] =
+    DbRun.delay { conn =>
+      val sql = s"SELECT chunk_data FROM $table WHERE file_id = ? ORDER BY chunk_nr ASC"
+      Using.resource(conn.prepareStatement(sql)) { ps =>
+        ps.setString(1, id.id)
+        Using.resource(ps.executeQuery()) { rs =>
+          var len                           = 0L
+          val md                            = MessageDigest.getInstance("SHA-256")
+          var ct: Option[SimpleContentType] = None
+          while (rs.next()) {
+            val data = rs.getBytes(1)
+            md.update(data)
+            len = len + data.length
+            if (ct.isEmpty) {
+              ct = Some(detect.detect(ByteVector.view(data), hint))
+            }
+          }
+          BinaryAttributes(
+            ByteVector.view(md.digest()),
+            ct.getOrElse(SimpleContentType.octetStream),
+            len
+          )
+        }
+      }
+    }
 
   def queryAttr(id: BinaryId): DbRun[F, Option[BinaryAttributes]] =
     DbRun

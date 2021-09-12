@@ -25,7 +25,7 @@ object CreateDataTable {
 
   def postgresData[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate[F](s"""
-        |CREATE TABLE "${name}" (
+        |CREATE TABLE IF NOT EXISTS "${name}" (
         |  file_id varchar(254) not null,
         |  chunk_nr int not null,
         |  chunk_len int not null,
@@ -35,7 +35,7 @@ object CreateDataTable {
 
   def postgresAttr[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate(s"""
-         |CREATE TABLE "${name}" (
+         |CREATE TABLE IF NOT EXISTS "${name}" (
          |  file_id varchar(254) not null,
          |  sha256 varchar(254) not null,
          |  content_type varchar(254) not null,
@@ -43,7 +43,7 @@ object CreateDataTable {
          |  primary key (file_id)
          |)""".stripMargin)
 
-  private def postgresFK[F[_]: Sync](
+  def postgresFK[F[_]: Sync](
       dataTable: String,
       attrTable: String
   )(implicit log: Logger[F]): DbRun[F, Int] =
@@ -64,7 +64,7 @@ object CreateDataTable {
   def mariadbAttr[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     postgresAttr(name)
 
-  private def mariadbFK[F[_]: Sync](dataTable: String, attrTable: String)(implicit
+  def mariadbFK[F[_]: Sync](dataTable: String, attrTable: String)(implicit
       log: Logger[F]
   ): DbRun[F, Int] =
     DbRun.executeUpdate(

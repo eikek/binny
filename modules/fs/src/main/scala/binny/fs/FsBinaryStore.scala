@@ -32,13 +32,13 @@ final class FsBinaryStore[F[_]: Async](
       w <- Stopwatch.start[F]
       _ <- stored
       _ <- attrStore.saveAttr(data.id, attr)
-      _ <- Stopwatch.show(w)(d => logger.debug(s"Inserted file ${data.id.id} in $d"))
+      _ <- Stopwatch.show(w)(d => logger.debug(s"Inserting file ${data.id.id} took $d"))
     } yield ()
   }
 
-  def load(id: BinaryId, range: ByteRange, chunkSize: Int): OptionT[F, BinaryData[F]] = {
+  def load(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] = {
     val target = config.getTarget(id)
-    Impl.load[F](id, target, range, chunkSize)
+    Impl.load[F](id, target, range, config.chunkSize)
   }
 
   def delete(id: BinaryId): F[Boolean] = {

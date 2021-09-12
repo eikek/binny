@@ -37,3 +37,5 @@ potentially large binary.
 
 - https://jdbc.postgresql.org/documentation/head/binary-data.html
 - https://www.postgresql.org/docs/current/lo.html
+- https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/
+- https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/home.html

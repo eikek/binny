@@ -6,6 +6,7 @@ import binny.util.Logger
 import cats.Monad
 import cats.effect._
 import cats.kernel.Monoid
+import cats.implicits._
 
 trait Implicits {
 
@@ -17,12 +18,13 @@ trait Implicits {
 
   implicit final class DbRunIOOps[F[_]: Sync, A](dbio: DbRun[F, A]) {
     def execute(ds: DataSource): F[A] =
-      Resource
-        .make(Sync[F].blocking(ds.getConnection))(conn => Sync[F].blocking(conn.close()))
-        .use(dbio.run)
+      DataSourceResource(ds).use(dbio.run)
 
     def inTX(implicit log: Logger[F]): DbRun[F, A] =
       DbRun.inTX(dbio)
+
+    def attempt: DbRun[F, Either[Throwable, A]] =
+      dbio.mapF(_.attempt)
   }
 
   implicit final class DbRunIOResourceOps[F[_], A](rio: DbRun[Resource[F, *], A]) {

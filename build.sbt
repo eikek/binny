@@ -145,19 +145,20 @@ lazy val jdbc = project
   )
   .dependsOn(core % "compile->compile;test->test")
 
-lazy val pg = project
-  .in(file("modules/pg"))
+lazy val pglo = project
+  .in(file("modules/pglo"))
   .settings(sharedSettings)
   .settings(testSettings)
   .settings(scalafixSettings)
   .settings(
-    name := "binny-pg",
+    name := "binny-pglo",
     description := "Implementation using PostgreSQLs LargeObject API",
     libraryDependencies ++=
       Dependencies.postgres ++
-        Dependencies.testContainers.map(_ % Test)
+        Dependencies.testContainers.map(_ % Test),
+    addCompilerPlugin(Dependencies.kindProjectorPlugin)
   )
-  .dependsOn(core % "compile->compile;test->test")
+  .dependsOn(core % "compile->compile;test->test", jdbc % "compile->compile;test->test")
 
 lazy val s3 = project
   .in(file("modules/s3"))
@@ -166,7 +167,9 @@ lazy val s3 = project
   .settings(scalafixSettings)
   .settings(
     name := "binny-s3",
-    description := "Implementation using the S3 API"
+    description := "Implementation using the S3 API",
+    libraryDependencies ++=
+      Dependencies.amazonS3
   )
   .dependsOn(core % "compile->compile;test->test")
 
@@ -212,7 +215,7 @@ lazy val microsite = project
       "VERSION" -> latestRelease.value
     )
   )
-  .dependsOn(core % "compile->compile,test", fs, jdbc, pg, s3, tikaDetect)
+  .dependsOn(core % "compile->compile,test", fs, jdbc, pglo, s3, tikaDetect)
 
 lazy val readme = project
   .in(file("modules/readme"))
@@ -247,4 +250,4 @@ val root = project
     name := "binny-root",
     crossScalaVersions := Nil
   )
-  .aggregate(core, fs, jdbc, pg, s3, tikaDetect)
+  .aggregate(core, fs, jdbc, pglo, s3, tikaDetect)

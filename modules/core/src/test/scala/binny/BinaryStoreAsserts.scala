@@ -1,6 +1,7 @@
 package binny
 
 import binny.ContentTypeDetect.Hint
+import binny.util.Stopwatch
 import cats.effect._
 import fs2.{Chunk, Stream}
 import munit.CatsEffectSuite
@@ -13,7 +14,7 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
       for {
         givenSha <- data.through(fs2.hash.sha256).chunks.head.compile.lastOrError
         id       <- bs.insert(data, Hint.none)
-        elOpt    <- bs.load(id, ByteRange.All, 1024).value
+        elOpt    <- bs.load(id, ByteRange.All).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
         elAttr <- el.computeAttributes(ContentTypeDetect.none, Hint.none)
         _ = self.assertEquals(elAttr.sha256, givenSha.toByteVector)
@@ -22,7 +23,7 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
     def insertAndLoadRange(data: Stream[IO, Byte], range: ByteRange): IO[BinaryData[IO]] =
       for {
         id    <- bs.insert(data, Hint.none)
-        elOpt <- bs.load(id, range, 1024).value
+        elOpt <- bs.load(id, range).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
       } yield el
 
@@ -34,13 +35,17 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
         .flatMap(str => Stream.chunk(Chunk.array(str.getBytes)))
         .covary[IO]
         .buffer(32 * 1024)
-
+      val log = Log4sLogger[IO](org.log4s.getLogger)
       for {
         givenSha <- data.through(fs2.hash.sha256).chunks.head.compile.lastOrError
-        id       <- bs.insert(data, Hint.none)
-        elOpt    <- bs.load(id, ByteRange.All, 16 * 1024).value
+        id       <- Stopwatch.wrap(d => log.debug(s"Insert larger file took: $d")) {
+          bs.insert(data, Hint.none)
+        }
+        w <- Stopwatch.start[IO]
+        elOpt    <- bs.load(id, ByteRange.All).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
         elAttr <- el.computeAttributes(ContentTypeDetect.none, Hint.none)
+        _ <- Stopwatch.show(w)(d => log.debug(s"Loading and sha256 took: $d"))
         _ = self.assertEquals(elAttr.sha256, givenSha.toByteVector)
       } yield ()
     }
@@ -48,11 +53,11 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
     def assertInsertAndDelete(): IO[Unit] =
       for {
         id   <- bs.insert(ExampleData.helloWorld[IO], Hint.none)
-        file <- bs.load(id, ByteRange.All, 1024).value
+        file <- bs.load(id, ByteRange.All).value
         _ = assert(file.isDefined)
         deleted <- bs.delete(id)
         _ = assert(deleted)
-        file2 <- bs.load(id, ByteRange.All, 1024).value
+        file2 <- bs.load(id, ByteRange.All).value
         _ = assert(file2.isEmpty)
       } yield ()
   }

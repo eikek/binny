@@ -35,10 +35,7 @@ final class JdbcBinaryStore[F[_]: Sync](
       attrStore.saveAttr(data.id, Sync[F].pure(BinaryAttributes.empty))
 
     val saveAttr = {
-      val ba = dataStream(data.id, ByteRange.All)
-        .through(BinaryAttributes.compute(config.detect, hint))
-        .compile
-        .lastOrError
+      val ba = dataApi.computeAttr(data.id, config.detect, hint).execute(ds)
       for {
         w <- Stopwatch.start[F]
         _ <- attrStore.saveAttr(data.id, ba)
@@ -93,7 +90,7 @@ final class JdbcBinaryStore[F[_]: Sync](
           .flatMap(Stream.chunk)
     }
 
-  def load(id: BinaryId, range: ByteRange, chunkSize: Int): OptionT[F, BinaryData[F]] =
+  def load(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] =
     OptionT(
       dataApi
         .exists(id)

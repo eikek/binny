@@ -24,6 +24,13 @@ object Stopwatch {
   def show[F[_]: Sync](time: Watch[F])(f: String => F[Unit]): F[Unit] =
     apply(time)(d => f(humanTime(d)))
 
+  def wrap[F[_]: Sync, A](f: String => F[Unit])(fa: F[A]): F[A] =
+    for {
+      w <- start[F]
+      a <- fa
+      _ <- show(w)(f)
+    } yield a
+
   def humanTime(d: Duration): String =
     d match {
       case fd: FiniteDuration =>
