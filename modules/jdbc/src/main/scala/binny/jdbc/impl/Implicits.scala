@@ -5,8 +5,8 @@ import javax.sql.DataSource
 import binny.util.Logger
 import cats.Monad
 import cats.effect._
-import cats.kernel.Monoid
 import cats.implicits._
+import cats.kernel.Monoid
 
 trait Implicits {
 

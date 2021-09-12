@@ -16,8 +16,7 @@ final class JdbcBinaryStore[F[_]: Sync](
     logger: Logger[F],
     val config: JdbcStoreConfig,
     attrStore: BinaryAttributeStore[F]
-) extends BinaryStore[F]
-    with ReadonlyAttributeStore[F] {
+) extends BinaryStore[F] {
 
   implicit private val log: Logger[F] = logger
   private[this] val dataApi           = new DbRunApi[F](config.dataTable, logger)

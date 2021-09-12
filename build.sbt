@@ -169,7 +169,8 @@ lazy val s3 = project
     name := "binny-s3",
     description := "Implementation using the S3 API",
     libraryDependencies ++=
-      Dependencies.amazonS3
+      Dependencies.minio ++
+        Dependencies.fs2io
   )
   .dependsOn(core % "compile->compile;test->test")
 

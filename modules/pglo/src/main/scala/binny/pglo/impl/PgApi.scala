@@ -1,5 +1,7 @@
 package binny.pglo.impl
 
+import java.security.MessageDigest
+
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.DbRun
@@ -7,14 +9,12 @@ import binny.jdbc.impl.Implicits._
 import binny.util.Logger
 import cats.arrow.FunctionK
 import cats.effect._
+import cats.implicits._
 import cats.~>
+import fs2.{Chunk, Stream}
 import org.postgresql.PGConnection
 import org.postgresql.largeobject.{LargeObject, LargeObjectManager}
-import fs2.{Chunk, Stream}
-import cats.implicits._
 import scodec.bits.ByteVector
-
-import java.security.MessageDigest
 
 final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
   implicit private val log = logger
@@ -63,17 +63,17 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
     val copy: DbRun[F, (Long, Int)] =
       for {
         res <- openLOWrite().use(obj =>
-            bytes
-              .evalMap(chunk =>
-                Sync[F]
-                  .blocking {
-                    obj.write(chunk.toArraySlice.values)
-                    chunk.size
-                  }
-              )
-              .compile
-              .foldMonoid
-              .map(size => (obj.getLongOID, size))
+          bytes
+            .evalMap(chunk =>
+              Sync[F]
+                .blocking {
+                  obj.write(chunk.toArraySlice.values)
+                  chunk.size
+                }
+            )
+            .compile
+            .foldMonoid
+            .map(size => (obj.getLongOID, size))
         )
       } yield res
 
@@ -99,26 +99,37 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
       _   <- DbRun.delay(_ => oid.foreach(id => lom.delete(id)))
     } yield n
 
-  def computeAttr(id: BinaryId, detect: ContentTypeDetect, hint: Hint, chunkSize: Int): DbRun[F, BinaryAttributes] =
+  def computeAttr(
+      id: BinaryId,
+      detect: ContentTypeDetect,
+      hint: Hint,
+      chunkSize: Int
+  ): DbRun[F, BinaryAttributes] =
     for {
       lom <- loManager
       oid <- findOid(id)
-      attr <- openLORead(lom, oid.getOrElse(-1)).use(obj  => Sync[F].blocking {
-        val buffer = new Array[Byte](chunkSize)
-        var len                           = 0L
-        val md                            = MessageDigest.getInstance("SHA-256")
-        var ct: Option[SimpleContentType] = None
+      attr <- openLORead(lom, oid.getOrElse(-1)).use(obj =>
+        Sync[F].blocking {
+          val buffer = new Array[Byte](chunkSize)
+          var len    = 0L
+          val md     = MessageDigest.getInstance("SHA-256")
+          var ct     = (None: Option[SimpleContentType])
 
-        var read: Int = -1
-        while ({ read = obj.read(buffer, 0, buffer.length); read } > 0) {
-          md.update(buffer, 0, read)
-          len = len + read
-          if (ct.isEmpty) {
-            ct = Some(detect.detect(ByteVector.view(buffer, 0, read), hint))
+          var read: Int = -1
+          while ({ read = obj.read(buffer, 0, buffer.length); read } > 0) {
+            md.update(buffer, 0, read)
+            len = len + read
+            if (ct.isEmpty) {
+              ct = Some(detect.detect(ByteVector.view(buffer, 0, read), hint))
+            }
           }
+          BinaryAttributes(
+            ByteVector.view(md.digest()),
+            ct.getOrElse(SimpleContentType.octetStream),
+            len
+          )
         }
-        BinaryAttributes(ByteVector.view(md.digest()), ct.getOrElse(SimpleContentType.octetStream), len)
-      })
+      )
     } yield attr
 
   def load(id: BinaryId, range: ByteRange, chunkSize: Int): Stream[DbRun[F, *], Byte] = {

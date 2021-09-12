@@ -1,11 +1,11 @@
 package binny.pglo
 
-import binny.pglo.impl.PgApi
+import javax.sql.DataSource
+
 import binny.jdbc.impl.Implicits._
+import binny.pglo.impl.PgApi
 import binny.util.Logger
 import cats.effect.kernel.Sync
-
-import javax.sql.DataSource
 
 object PgSetup {
 

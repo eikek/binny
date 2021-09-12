@@ -19,7 +19,13 @@ final case class FsStoreConfig(
 object FsStoreConfig {
 
   def default(baseDir: Path): FsStoreConfig =
-    FsStoreConfig(baseDir, ContentTypeDetect.none, OverwriteMode.Fail, PathMapping.Subdir, 100 * 1024)
+    FsStoreConfig(
+      baseDir,
+      ContentTypeDetect.none,
+      OverwriteMode.Fail,
+      PathMapping.Subdir,
+      100 * 1024
+    )
 
   sealed trait OverwriteMode
   object OverwriteMode {

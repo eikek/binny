@@ -3,11 +3,11 @@ package binny.pglo
 import binny._
 import binny.jdbc.Docker
 import binny.util.Stopwatch
+import cats.effect._
+import com.dimafeng.testcontainers.PostgreSQLContainer
 import com.dimafeng.testcontainers.munit.TestContainerForAll
 import munit.CatsEffectSuite
 import org.log4s.getLogger
-import cats.effect._
-import com.dimafeng.testcontainers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
 class PgLoBinaryStoreTest
@@ -54,6 +54,13 @@ class PgLoBinaryStoreTest
         str  <- data.bytes.through(fs2.text.utf8.decode).foldMonoid.compile.lastOrError
         _ = assertEquals(str, "llo W")
       } yield ()
+    }
+  }
+
+  test("insert and delete") {
+    withContainers { cnt =>
+      val store = makeBinStore(cnt, logger, config)
+      store.assertInsertAndDelete()
     }
   }
 }

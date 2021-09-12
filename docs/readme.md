@@ -39,3 +39,5 @@ potentially large binary.
 - https://www.postgresql.org/docs/current/lo.html
 - https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/
 - https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/home.html
+- https://docs.min.io/docs/java-client-quickstart-guide.html
+- https://docs.min.io/docs/minio-docker-quickstart-guide.html

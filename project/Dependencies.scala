@@ -2,7 +2,6 @@ import sbt._
 
 object Dependencies {
 
-  val amazonS3Version = "2.17.34"
   val fs2Version             = "3.1.2"
   val h2Version              = "1.4.200"
   val munitVersion           = "0.7.27"
@@ -16,10 +15,10 @@ object Dependencies {
   val tikaVersion            = "2.1.0"
   val icu4jVersion           = "69.1"
   val kindProjectorVersion   = "0.10.3"
+  val minioVersion           = "8.3.0"
 
-
-  val amazonS3 = Seq(
-    "software.amazon.awssdk" % "s3" % amazonS3Version
+  val minio = Seq(
+    "io.minio" % "minio" % minioVersion
   )
 
   val kindProjectorPlugin = "org.typelevel" %% "kind-projector" % kindProjectorVersion

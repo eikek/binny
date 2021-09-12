@@ -38,14 +38,14 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
       val log = Log4sLogger[IO](org.log4s.getLogger)
       for {
         givenSha <- data.through(fs2.hash.sha256).chunks.head.compile.lastOrError
-        id       <- Stopwatch.wrap(d => log.debug(s"Insert larger file took: $d")) {
+        id <- Stopwatch.wrap(d => log.debug(s"Insert larger file took: $d")) {
           bs.insert(data, Hint.none)
         }
-        w <- Stopwatch.start[IO]
-        elOpt    <- bs.load(id, ByteRange.All).value
+        w     <- Stopwatch.start[IO]
+        elOpt <- bs.load(id, ByteRange.All).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
         elAttr <- el.computeAttributes(ContentTypeDetect.none, Hint.none)
-        _ <- Stopwatch.show(w)(d => log.debug(s"Loading and sha256 took: $d"))
+        _      <- Stopwatch.show(w)(d => log.debug(s"Loading and sha256 took: $d"))
         _ = self.assertEquals(elAttr.sha256, givenSha.toByteVector)
       } yield ()
     }

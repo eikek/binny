@@ -1,19 +1,19 @@
 package binny.jdbc.impl
 
-import binny.ContentTypeDetect.Hint
-
 import java.io.ByteArrayInputStream
+import java.security.MessageDigest
+
+import scala.util.Using
+
+import binny.ContentTypeDetect.Hint
+import binny._
 import binny.jdbc.impl.Implicits._
 import binny.util.Logger
-import binny.{BinaryAttributes, BinaryId, ContentTypeDetect, SimpleContentType}
 import cats.effect._
 import cats.implicits._
 import fs2.Chunk
 import fs2.Stream
 import scodec.bits.ByteVector
-
-import java.security.MessageDigest
-import scala.util.Using
 
 final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
   implicit private val log = logger

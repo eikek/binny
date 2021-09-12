@@ -1,5 +1,8 @@
 package binny.pglo
 
+import java.sql.Connection
+import javax.sql.DataSource
+
 import binny._
 import binny.jdbc.impl.DataSourceResource
 import binny.jdbc.impl.Implicits._
@@ -10,16 +13,12 @@ import cats.effect._
 import cats.implicits._
 import fs2.Stream
 
-import java.sql.Connection
-import javax.sql.DataSource
-
 final class PgLoBinaryStore[F[_]: Sync](
     val config: PgLoConfig,
     logger: Logger[F],
     ds: DataSource,
     attrStore: BinaryAttributeStore[F]
-) extends BinaryStore[F]
-    with ReadonlyAttributeStore[F] {
+) extends BinaryStore[F] {
   private[this] val pg = new PgApi[F](config.table, logger)
 
   def insertWith(data: BinaryData[F], hint: ContentTypeDetect.Hint): F[Unit] =
@@ -29,8 +28,13 @@ final class PgLoBinaryStore[F[_]: Sync](
       _ <- Stopwatch.show(insertTime)(d =>
         logger.trace(s"Inserting bytes for ${data.id.id} took: $d")
       )
-      _ <- Stopwatch.wrap(d => logger.trace(s"Inserting attributes for ${data.id.id} took: $d")) {
-        attrStore.saveAttr(data.id, pg.computeAttr(data.id, config.detect, hint, config.chunkSize).execute(ds))
+      _ <- Stopwatch.wrap(d =>
+        logger.trace(s"Inserting attributes for ${data.id.id} took: $d")
+      ) {
+        attrStore.saveAttr(
+          data.id,
+          pg.computeAttr(data.id, config.detect, hint, config.chunkSize).execute(ds)
+        )
       }
       _ <- Stopwatch.show(insertTime)(d =>
         logger.debug(s"Inserting ${data.id.id} took: $d")

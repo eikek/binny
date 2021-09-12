@@ -13,8 +13,7 @@ final class FsBinaryStore[F[_]: Async](
     val config: FsStoreConfig,
     logger: Logger[F],
     attrStore: BinaryAttributeStore[F]
-) extends BinaryStore[F]
-    with ReadonlyAttributeStore[F] {
+) extends BinaryStore[F] {
 
   def insertWith(data: BinaryData[F], hint: Hint): F[Unit] = {
     val target = config.getTarget(data.id)
