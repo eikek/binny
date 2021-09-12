@@ -1,13 +1,13 @@
 package binny.jdbc
 
+import javax.sql.DataSource
+
 import binny.Log4sLogger
 import binny.jdbc.impl.DbRun
+import binny.jdbc.impl.Implicits._
 import cats.effect._
 import munit.CatsEffectSuite
 import org.log4s.getLogger
-import binny.jdbc.impl.Implicits._
-
-import javax.sql.DataSource
 
 class DbRunTest extends CatsEffectSuite with DbFixtures {
   implicit private[this] val logger = Log4sLogger[IO](getLogger)
@@ -16,7 +16,7 @@ class DbRunTest extends CatsEffectSuite with DbFixtures {
   val dataSource: FunFixture[DataSource] = h2MemoryDataSource
 
   dataSource.test("exists query") { ds =>
-    DatabaseSetup.run[IO](Dbms.PostgreSQL, ds, config).unsafeRunSync()
+    DatabaseSetup.runData[IO](Dbms.PostgreSQL, ds, "file_chunk").unsafeRunSync()
     DbRun
       .update[IO]("UPDATE file_chunk set file_id = ? where file_id = ?") { ps =>
         ps.setString(1, "abc")

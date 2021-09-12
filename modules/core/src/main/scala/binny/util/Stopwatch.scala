@@ -1,8 +1,8 @@
 package binny.util
 
-import cats.effect.Sync
-
 import scala.concurrent.duration._
+
+import cats.effect.Sync
 import cats.implicits._
 
 object Stopwatch {

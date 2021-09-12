@@ -1,12 +1,12 @@
 package binny.jdbc
 
+import javax.sql.DataSource
+
 import binny.util.Logger
 import cats.effect._
 import org.h2.jdbcx.JdbcDataSource
 import org.mariadb.jdbc.MariaDbDataSource
 import org.postgresql.ds.PGSimpleDataSource
-
-import javax.sql.DataSource
 
 final case class ConnectionConfig(
     url: String,
@@ -44,12 +44,17 @@ final case class ConnectionConfig(
         sys.error(s"Unknown jdbc url: $url")
     }
 
-  def setup[F[_]: Sync](cfg: JdbcStoreConfig)(implicit log: Logger[F]): F[Int] =
+  def setup[F[_]: Sync](dataTable: String, attrTable: String)(implicit
+      log: Logger[F]
+  ): F[Int] =
     dbms match {
-      case "h2"         => DatabaseSetup.postgres(dataSource, cfg)
-      case "mariadb"    => DatabaseSetup.mariadb(dataSource, cfg)
-      case "postgresql" => DatabaseSetup.postgres(dataSource, cfg)
-      case _            => sys.error(s"Unknown jdbc url: $url")
+      case "h2" =>
+        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
+      case "mariadb" =>
+        DatabaseSetup.runBoth(Dbms.MariaDB, dataSource, dataTable, attrTable)
+      case "postgresql" =>
+        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
+      case _ => sys.error(s"Unknown jdbc url: $url")
     }
 
 }

@@ -18,6 +18,8 @@ final case class BinaryAttributes(
 )
 
 object BinaryAttributes {
+  val empty: BinaryAttributes =
+    BinaryAttributes(ByteVector.empty, SimpleContentType.octetStream, 0L)
 
   def asString(ba: BinaryAttributes): String = {
     val props = new Properties()

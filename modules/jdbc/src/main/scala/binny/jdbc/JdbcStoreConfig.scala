@@ -4,7 +4,6 @@ import binny.ContentTypeDetect
 
 final case class JdbcStoreConfig(
     dataTable: String,
-    metaTable: Option[String],
     chunkSize: Int,
     detect: ContentTypeDetect
 )
@@ -12,6 +11,6 @@ final case class JdbcStoreConfig(
 object JdbcStoreConfig {
 
   val default =
-    JdbcStoreConfig("file_chunk", Some("file_attr"), 512 * 1024, ContentTypeDetect.none)
+    JdbcStoreConfig("file_chunk", 512 * 1024, ContentTypeDetect.none)
 
 }

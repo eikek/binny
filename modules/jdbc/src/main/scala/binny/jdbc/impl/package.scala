@@ -1,13 +1,13 @@
 package binny.jdbc
 
+import java.sql.{Connection, PreparedStatement, ResultSet}
+import java.util.concurrent.atomic.AtomicLong
+
 import binny.util.Logger
 import cats.Applicative
 import cats.data.Kleisli
 import cats.effect._
 import cats.implicits._
-
-import java.sql.{Connection, PreparedStatement, ResultSet}
-import java.util.concurrent.atomic.AtomicLong
 
 package object impl {
   type DbRun[F[_], A] = Kleisli[F, Connection, A]

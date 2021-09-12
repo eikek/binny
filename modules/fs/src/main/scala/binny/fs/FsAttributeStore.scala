@@ -3,6 +3,7 @@ package binny.fs
 import binny.{BinaryAttributeStore, BinaryAttributes, BinaryId}
 import cats.data.OptionT
 import cats.effect.Async
+import cats.implicits._
 import fs2.io.file.Path
 
 final class FsAttributeStore[F[_]: Async](getFile: BinaryId => Path)
@@ -13,9 +14,9 @@ final class FsAttributeStore[F[_]: Async](getFile: BinaryId => Path)
     Impl.loadAttrs[F](file)
   }
 
-  def saveAttr(id: BinaryId, attrs: BinaryAttributes): F[Unit] = {
+  def saveAttr(id: BinaryId, attrs: F[BinaryAttributes]): F[Unit] = {
     val file = getFile(id)
-    Impl.writeAttrs[F](file, attrs)
+    attrs.flatMap(a => Impl.writeAttrs[F](file, a))
   }
 
   def deleteAttr(id: BinaryId): F[Boolean] = {

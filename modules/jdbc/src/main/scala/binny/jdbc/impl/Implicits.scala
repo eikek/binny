@@ -1,11 +1,11 @@
 package binny.jdbc.impl
 
+import javax.sql.DataSource
+
 import binny.util.Logger
 import cats.Monad
 import cats.effect._
 import cats.kernel.Monoid
-
-import javax.sql.DataSource
 
 trait Implicits {
 

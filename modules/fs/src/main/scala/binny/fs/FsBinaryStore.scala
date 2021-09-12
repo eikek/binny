@@ -31,7 +31,7 @@ final class FsBinaryStore[F[_]: Async](
       _ <- logger.debug(s"Insert file with id ${data.id.id}")
       w <- Stopwatch.start[F]
       _ <- stored
-      _ <- attr.flatMap(attrStore.saveAttr(data.id, _))
+      _ <- attrStore.saveAttr(data.id, attr)
       _ <- Stopwatch.show(w)(d => logger.debug(s"Inserted file ${data.id.id} in $d"))
     } yield ()
   }

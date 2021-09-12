@@ -1,15 +1,15 @@
 package binny.jdbc.impl
 
+import java.io.ByteArrayInputStream
+
+import binny.jdbc.impl.Implicits._
+import binny.util.Logger
 import binny.{BinaryAttributes, BinaryId, SimpleContentType}
 import cats.effect._
-import Implicits._
-import binny.util.Logger
+import cats.implicits._
 import fs2.Chunk
 import fs2.Stream
 import scodec.bits.ByteVector
-import cats.implicits._
-
-import java.io.ByteArrayInputStream
 
 final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
   implicit private val log = logger
@@ -66,10 +66,15 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
   def insertAllData(
       id: BinaryId,
       data: Stream[F, Chunk[Byte]]
-  ): Stream[F, DbRun[F, Int]] =
-    data.zipWithIndex.map { case (chunk, index) =>
+  ): Stream[F, DbRun[F, Int]] = {
+    val bytes =
+      data.take(1).ifEmpty(Stream.emit(Chunk.empty[Byte])) ++
+        data.drop(1)
+
+    bytes.zipWithIndex.map { case (chunk, index) =>
       insertChunk(id, index.toInt, chunk)
     }
+  }
 
   def delete(id: BinaryId): DbRun[F, Int] =
     DbRun.update(s"DELETE FROM $table WHERE file_id = ?") { ps =>

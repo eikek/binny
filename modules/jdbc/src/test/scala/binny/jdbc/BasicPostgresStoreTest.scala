@@ -1,12 +1,12 @@
 package binny.jdbc
 
 import binny._
+import cats.effect._
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import com.dimafeng.testcontainers.munit.TestContainerForAll
-import org.testcontainers.utility.DockerImageName
-import cats.effect._
 import munit.CatsEffectSuite
 import org.log4s.getLogger
+import org.testcontainers.utility.DockerImageName
 
 class BasicPostgresStoreTest
     extends CatsEffectSuite
@@ -27,14 +27,14 @@ class BasicPostgresStoreTest
       for {
         _ <- store.assertInsertAndLoadLargerFile()
         _ <- store.assertInsertAndDelete()
-        //_ <- store.assertInsertAndLoad(ExampleData.empty[IO])
+        _ <- store.assertInsertAndLoad(ExampleData.empty[IO])
         _ <- store.assertInsertAndLoad(ExampleData.helloWorld)
-//        _ <-
-//          for {
-//            data <- store.insertAndLoadRange(ExampleData.helloWorld, ByteRange(2, 5))
-//            str <- data.bytes.through(fs2.text.utf8.decode).foldMonoid.compile.lastOrError
-//            _ = assertEquals(str, "llo W")
-//          } yield ()
+        _ <-
+          for {
+            data <- store.insertAndLoadRange(ExampleData.helloWorld, ByteRange(2, 5))
+            str  <- data.bytes.through(fs2.text.utf8.decode).foldMonoid.compile.lastOrError
+            _ = assertEquals(str, "llo W")
+          } yield ()
       } yield ()
     }
   }
