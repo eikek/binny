@@ -1,4 +1,4 @@
-package binny.s3
+package binny.minio
 
 import binny._
 

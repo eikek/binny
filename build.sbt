@@ -160,6 +160,20 @@ lazy val pglo = project
   )
   .dependsOn(core % "compile->compile;test->test", jdbc % "compile->compile;test->test")
 
+lazy val minio = project
+  .in(file("modules/minio"))
+  .settings(sharedSettings)
+  .settings(testSettings)
+  .settings(scalafixSettings)
+  .settings(
+    name := "binny-minio",
+    description := "Implementation using the S3 API using MinIO SDK",
+    libraryDependencies ++=
+      Dependencies.minio ++
+        Dependencies.fs2io
+  )
+  .dependsOn(core % "compile->compile;test->test")
+
 lazy val s3 = project
   .in(file("modules/s3"))
   .settings(sharedSettings)
@@ -167,12 +181,11 @@ lazy val s3 = project
   .settings(scalafixSettings)
   .settings(
     name := "binny-s3",
-    description := "Implementation using the S3 API",
+    description := "Implementation using the S3 API using fs2-aws",
     libraryDependencies ++=
-      Dependencies.minio ++
-        Dependencies.fs2io
+      Dependencies.fs2Aws
   )
-  .dependsOn(core % "compile->compile;test->test")
+  .dependsOn(core % "compile->compile;test->test", minio % "test->test")
 
 lazy val tikaDetect = project
   .in(file("modules/tika-detect"))
@@ -216,7 +229,7 @@ lazy val microsite = project
       "VERSION" -> latestRelease.value
     )
   )
-  .dependsOn(core % "compile->compile,test", fs, jdbc, pglo, s3, tikaDetect)
+  .dependsOn(core % "compile->compile,test", fs, jdbc, pglo, minio, s3, tikaDetect)
 
 lazy val readme = project
   .in(file("modules/readme"))
@@ -251,4 +264,4 @@ val root = project
     name := "binny-root",
     crossScalaVersions := Nil
   )
-  .aggregate(core, fs, jdbc, pglo, s3, tikaDetect)
+  .aggregate(core, fs, jdbc, pglo, minio, s3, tikaDetect)

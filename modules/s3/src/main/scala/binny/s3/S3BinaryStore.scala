@@ -1,94 +1,76 @@
 package binny.s3
 
+import java.net.URI
+
 import binny._
-import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
-import fs2.Stream
-import io.minio.MinioClient
+import fs2.aws.s3.S3
+import io.laserdisc.pure.s3.tagless.Interpreter
+import software.amazon.awssdk.auth.credentials.{AwsCredentials, StaticCredentialsProvider}
+import software.amazon.awssdk.services.s3.{S3AsyncClient, S3AsyncClientBuilder}
 
 final class S3BinaryStore[F[_]: Async](
-    val config: S3Config,
-    client: MinioClient,
+    s3: S3[F],
     attrStore: BinaryAttributeStore[F],
-    logger: Logger[F]
+    val config: S3Config
 ) extends BinaryStore[F] {
 
-  private val minio = new Minio[F](client)
-
   def insertWith(data: BinaryData[F], hint: ContentTypeDetect.Hint): F[Unit] = {
-    val key = config.keyMapping(data.id)
-    val inStream = data.bytes.through(fs2.io.toInputStream)
-    val upload =
-      for {
-        _ <- Stream.eval(minio.makeBucketIfMissing(key.bucket))
-        _ <- minio.uploadObject(key, config.partSize, inStream)
-      } yield ()
+    val key = config.mapping(data.id)
+    val uploadPipe =
+      s3.uploadFileMultipart(key.bucket, key.key, config.partSize).andThen(_.drain)
 
-    for {
-      _ <- Stopwatch.wrap(d => logger.trace(s"Upload took: $d")) {
-        upload.compile.drain
-      }
-      _ <- Stopwatch.wrap(d =>
-        logger.trace(s"Computing and storing attributes took: $d")
-      ) {
-        attrStore.saveAttr(
-          data.id,
-          minio.computeAttr(key, config.detect, hint, config.chunkSize)
-        )
-      }
-    } yield ()
+    val attr = data.bytes
+      .observe(uploadPipe)
+      .through(BinaryAttributes.compute(config.detect, hint))
+      .compile
+      .lastOrError
+
+    attrStore.saveAttr(data.id, attr) *> attr.map(_ => ())
   }
 
   def delete(id: BinaryId): F[Boolean] = {
-    val key = config.keyMapping(id)
-    for {
-      exists <- minio.statObject(key)
-      _ <- if (exists) minio.deleteObject(key) else ().pure[F]
-    } yield exists
+    val key = config.mapping(id)
+    s3.delete(key.bucket, key.key).map(_ => true)
   }
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] = {
-    val key = config.keyMapping(id)
-    OptionT(minio.statObject(key).map {
-      case true  => Some(BinaryData(id, dataStream(key, range)))
-      case false => None
-    })
+    val key = config.mapping(id)
+    val bytes = s3.readFileMultipart(key.bucket, key.key, config.partSize)
+    OptionT(bytes.head.compile.last)
+      .map(_ => BinaryData(id, bytes))
   }
 
   def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =
     attrStore.findAttr(id)
-
-  private def dataStream(key: S3Key, range: ByteRange): Stream[F, Byte] = {
-    val fin = minio.getObject(key, range)
-    fs2.io.readInputStream(fin, config.chunkSize, true)
-  }
 }
 
 object S3BinaryStore {
 
   def apply[F[_]: Async](
-      config: S3Config,
-      client: MinioClient,
+      s3Client: S3AsyncClientBuilder,
       attrStore: BinaryAttributeStore[F],
-      logger: Logger[F]
-  ): S3BinaryStore[F] =
-    new S3BinaryStore[F](config, client, attrStore, logger)
+      config: S3Config
+  ): Resource[F, S3BinaryStore[F]] =
+    for {
+      s3inter <- Interpreter[F].S3AsyncClientOpResource(s3Client)
+      s3 <- Resource.eval(S3.create(s3inter))
+    } yield new S3BinaryStore[F](s3, attrStore, config)
 
-  def apply[F[_]: Async](
-      config: S3Config,
+  def basic[F[_]: Async](
+      creds: AwsCredentials,
+      endpoint: URI,
       attrStore: BinaryAttributeStore[F],
-      logger: Logger[F]
-  ): S3BinaryStore[F] =
-    new S3BinaryStore[F](
-      config,
-      MinioClient
+      config: S3Config
+  ): Resource[F, S3BinaryStore[F]] =
+    apply(
+      S3AsyncClient
         .builder()
-        .endpoint(config.endpoint)
-        .credentials(config.accessKey, config.secretKey)
-        .build(),
+        .credentialsProvider(StaticCredentialsProvider.create(creds))
+        .endpointOverride(endpoint),
       attrStore,
-      logger
+      config
     )
 }

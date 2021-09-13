@@ -3,7 +3,9 @@ package binny.jdbc.impl
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
 import java.sql.ResultSet
+
 import scala.util.Using
+
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.Implicits._

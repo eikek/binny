@@ -1,4 +1,4 @@
-package binny.s3
+package binny.minio
 
 import java.io.InputStream
 import java.security.MessageDigest
@@ -11,7 +11,7 @@ import fs2.Stream
 import io.minio._
 import scodec.bits.ByteVector
 
-final private[s3] class Minio[F[_]: Sync](client: MinioClient) {
+final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
 
   def bucketExists(name: String): F[Boolean] =
     Sync[F].blocking {

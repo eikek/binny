@@ -16,6 +16,11 @@ object Dependencies {
   val icu4jVersion = "69.1"
   val kindProjectorVersion = "0.10.3"
   val minioVersion = "8.3.0"
+  val fs2AwsVersion = "4.0.0-RC2"
+
+  val fs2Aws = Seq(
+    "io.laserdisc" %% "fs2-aws-s3" % fs2AwsVersion
+  )
 
   val minio = Seq(
     "io.minio" % "minio" % minioVersion
