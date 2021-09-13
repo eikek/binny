@@ -6,10 +6,10 @@ import binny.util.Stopwatch
 import cats.effect._
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import com.dimafeng.testcontainers.munit.TestContainerForAll
+import fs2.{Chunk, Stream}
 import munit.CatsEffectSuite
 import org.log4s.getLogger
 import org.testcontainers.utility.DockerImageName
-import fs2.{Chunk, Stream}
 
 class BasicPostgresStoreTest
     extends CatsEffectSuite

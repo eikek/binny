@@ -1,8 +1,8 @@
 import com.typesafe.sbt.SbtGit.GitKeys._
 
-val scala212     = "2.12.14"
-val scala213     = "2.13.6"
-val scala3       = "3.0.1"
+val scala212 = "2.12.14"
+val scala213 = "2.13.6"
+val scala3 = "3.0.1"
 val updateReadme = inputKey[Unit]("Update readme")
 
 addCommandAlias("ci", "; lint; +test; readme/updateReadme ;microsite/mdoc; +publishLocal")
@@ -98,7 +98,7 @@ val buildInfoSettings = Seq(
 )
 
 val scalafixSettings = Seq(
-  semanticdbEnabled := true,                        // enable SemanticDB
+  semanticdbEnabled := true, // enable SemanticDB
   semanticdbVersion := scalafixSemanticdb.revision, // use Scalafix compatible version
   ThisBuild / scalafixDependencies ++= Dependencies.organizeImports
 )
@@ -139,7 +139,7 @@ lazy val jdbc = project
     name := "binny-jdbc",
     description := "Implementation backed by a SQL database using pure JDBC",
     libraryDependencies ++=
-      Dependencies.databases.map(_        % Test) ++
+      Dependencies.databases.map(_ % Test) ++
         Dependencies.testContainers.map(_ % Test),
     addCompilerPlugin(Dependencies.kindProjectorPlugin)
   )
@@ -198,8 +198,8 @@ lazy val microsite = project
     publish / skip := true,
     micrositeFooterText := Some(
       s"""
-        |<p>&copy; 2020- <a href="https://github.com/eikek/binny">Binny v${latestRelease.value}</a></p>
-        |""".stripMargin
+         |<p>&copy; 2020- <a href="https://github.com/eikek/binny">Binny v${latestRelease.value}</a></p>
+         |""".stripMargin
     ),
     micrositeName := "Binny",
     micrositeDescription := "Binny – Deal with files",
@@ -231,7 +231,7 @@ lazy val readme = project
     ),
     updateReadme := {
       mdoc.evaluated
-      val out    = mdocOut.value / "readme.md"
+      val out = mdocOut.value / "readme.md"
       val target = (LocalRootProject / baseDirectory).value / "README.md"
       val logger = streams.value.log
       logger.info(s"Updating readme: $out -> $target")

@@ -1,9 +1,10 @@
 package binny.jdbc
 
 import javax.sql.DataSource
+
 import binny._
-import binny.jdbc.impl.{DataSourceResource, DbRunApi}
 import binny.jdbc.impl.Implicits._
+import binny.jdbc.impl.{DataSourceResource, DbRunApi}
 import binny.util.{Logger, RangeCalc, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
@@ -55,7 +56,6 @@ final class JdbcBinaryStore[F[_]: Sync](
 
   def delete(id: BinaryId): F[Boolean] =
     for {
-      _ <- logger.info(s"Deleting ${id.id}")
       w <- Stopwatch.start[F]
       n <- dataApi.delete(id).inTX.execute(ds)
       _ <- attrStore.deleteAttr(id)
@@ -99,28 +99,20 @@ final class JdbcBinaryStore[F[_]: Sync](
     * connection due to timeouts.
     */
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] =
-    OptionT(
-      dataApi
-        .exists(id)
-        .execute(ds)
-        .map(exists =>
-          if (exists) Some(BinaryData[F](id, dataStream(id, range))) else None
-        )
-    )
+    dataApi
+      .exists(id)
+      .execute(ds)
+      .map(_ => BinaryData[F](id, dataStream(id, range)))
 
-  /** Finds a binary by its id. This uses one connection to stream the entire file. Thus
-    * the connection is only closed when the stream terminates. This is useful for small
+  /** Finds a binary by its id. This uses a single connection for the entire byte stream.
+    * Thus the connection is closed when the stream terminates. This is useful for small
     * files or when only a small portion of a file is requested.
     */
   def findBinaryStateful(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] =
-    OptionT(
-      dataApi
-        .exists(id)
-        .execute(ds)
-        .map(exists =>
-          if (exists) Some(BinaryData[F](id, dataStreamSingleConn(id, range))) else None
-        )
-    )
+    dataApi
+      .exists(id)
+      .execute(ds)
+      .map(_ => BinaryData[F](id, dataStreamSingleConn(id, range)))
 
   def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =
     attrStore.findAttr(id)

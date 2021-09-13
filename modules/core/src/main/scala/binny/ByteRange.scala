@@ -6,6 +6,7 @@ sealed trait ByteRange {
 
   def includes(other: ByteRange): Boolean
 
+  def fold[A](fa: => A, fc: ByteRange.Chunk => A): A
 }
 
 object ByteRange {
@@ -13,16 +14,20 @@ object ByteRange {
   case object All extends ByteRange {
     val asString = "all"
     def includes(other: ByteRange) = true
+    def fold[A](fa: => A, fc: ByteRange.Chunk => A) =
+      fa
   }
-  final case class Chunk(offset: Long, length: Long) extends ByteRange {
+  final case class Chunk(offset: Long, length: Int) extends ByteRange {
     val asString = s"$offset,$length"
     def includes(other: ByteRange) = other match {
       case All => offset == 0 && length == Long.MaxValue
       case Chunk(off, len) =>
         off >= offset && len <= length
     }
+    def fold[A](fa: => A, fc: ByteRange.Chunk => A) =
+      fc(this)
   }
 
-  def apply(offset: Long, length: Long): ByteRange =
+  def apply(offset: Long, length: Int): ByteRange =
     Chunk(offset, length)
 }

@@ -1,11 +1,12 @@
 package binny.pglo
 
 import javax.sql.DataSource
+
 import binny._
 import binny.jdbc.impl.DataSourceResource
 import binny.jdbc.impl.Implicits._
 import binny.pglo.impl.PgApi
-import binny.util.{Logger, Stopwatch}
+import binny.util.{Logger, RangeCalc, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
@@ -47,22 +48,29 @@ final class PgLoBinaryStore[F[_]: Sync](
       _ <- Stopwatch.show(w)(d => logger.info(s"Deleting ${id.id} took $d"))
     } yield n > 0
 
+  /** Find the binary by its id. The byte stream is constructed to close resources to the
+    * database after loading a chunk. This is for safety, since database timeouts can
+    * occur if the stream "blocks". The `findBinaryStateful` is a variant that uses a
+    * single connection for the entire stream.
+    */
   def findBinary(
       id: BinaryId,
       range: ByteRange
-  ): OptionT[F, BinaryData[F]] =
-    findBinaryStateful(id, range)
-//  {
-//    val bytes =
-//      RangeCalc
-//        .calcChunks(range, config.chunkSize)
-//        .flatMap(r =>{
-//          println(s">>>>> range: $r")
-//          byteStream(id, r)
-//        })
-//    OptionT(pg.findOid(id).execute(ds)).map(_ => BinaryData(id, bytes))
-//  }
+  ): OptionT[F, BinaryData[F]] = {
+    def bytes(oid: Long) =
+      RangeCalc
+        .calcChunks(range, config.chunkSize)
+        .evalTap(r => logger.trace(s"Requesting range: $r"))
+        .evalMap(r => pg.loadChunkByOID(oid, r).execute(ds))
+        .takeThrough(_.size == config.chunkSize)
+        .flatMap(Stream.chunk)
 
+    OptionT(pg.findOid(id).execute(ds)).map(oid => BinaryData(id, bytes(oid)))
+  }
+
+  /** Finds the binary by its id and returns the bytes as a stream that uses a single
+    * connection to the database. The connection is closed when the stream is terminated.
+    */
   def findBinaryStateful(
       id: BinaryId,
       range: ByteRange
@@ -70,15 +78,10 @@ final class PgLoBinaryStore[F[_]: Sync](
     OptionT(pg.findOid(id).execute(ds)).map(_ => BinaryData(id, byteStream(id, range)))
 
   private def byteStream(id: BinaryId, range: ByteRange): Stream[F, Byte] = {
-    val data = pg.load2(id, range, config.chunkSize)
+    val data = pg.loadAll(id, range, config.chunkSize)
     Stream
       .resource(DataSourceResource(ds))
       .flatMap(data.run)
-
-//    val data = pg.load(id, range, config.chunkSize)
-//    Stream
-//      .resource(DataSourceResource(ds))
-//      .flatMap(conn => data.translate(Kleisli.applyK[F, Connection](conn)))
   }
 
   def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =

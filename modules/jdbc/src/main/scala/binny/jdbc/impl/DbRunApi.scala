@@ -2,29 +2,30 @@ package binny.jdbc.impl
 
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
+import java.sql.ResultSet
 import scala.util.Using
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.Implicits._
 import binny.util.{Logger, RangeCalc}
+import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
 import fs2.Chunk
 import fs2.Stream
 import scodec.bits.ByteVector
 
-import java.sql.ResultSet
-
 final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
-  implicit private val log = logger
+  implicit private val log: Logger[F] = logger
 
-  def exists(id: BinaryId): DbRun[F, Boolean] =
+  def exists(id: BinaryId): DbRun[OptionT[F, *], Unit] =
     DbRun
       .query(s"SELECT file_id FROM $table WHERE file_id = ? LIMIT ?") { ps =>
         ps.setString(1, id.id)
         ps.setInt(2, 1)
       }
-      .use(DbRun.hasNext[F])
+      .use(DbRun.readOpt[F, Unit](_ => ()))
+      .mapF(OptionT.apply)
 
   def insertEmptyAttr(id: BinaryId): DbRun[F, Int] =
     DbRun.update(
@@ -117,7 +118,7 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
 
     def readRow(rs: ResultSet, buf: Array[Byte]): F[Chunk[Byte]] =
       Sync[F].blocking(if (rs.next) rs.getBinaryStream(1).read(buf) else -1).map {
-        case n if n <= 0  => Chunk.empty
+        case n if n <= 0 => Chunk.empty
         case n if n < buf.length =>
           val ch = Chunk.array(buf, 0, n)
           if (offsets.isNone) ch

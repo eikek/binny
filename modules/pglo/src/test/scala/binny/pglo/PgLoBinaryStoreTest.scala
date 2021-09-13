@@ -27,17 +27,26 @@ class PgLoBinaryStoreTest
   assume(Docker.existsUnsafe, "docker not present")
 
   test("whats going on") {
-    val data = ExampleData.helloWorld
     withContainers { cnt =>
       val store = makeBinStore(cnt, logger, config)
+
+      val data = fs2.Stream
+        .emit("abcdefghijklmnopqrstuvwxyz")
+        .repeat
+        .take(20000)
+        .through(fs2.text.utf8.encode)
+        .covary[IO]
+        .buffer(32 * 1024)
 
       for {
         id <- store.insert(data, Hint.none)
         elOpt <- store.findBinary(id, ByteRange.All).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
-        elStr <- el.readUtf8String.compile.lastOrError
-        _ <- logger.info(s"bytes: ${elStr.getBytes.length}")
-        _ = assertEquals(elStr, "Hello World!")
+
+        n <- el.bytes.chunks.map(_.size).compile.foldMonoid
+        k <- data.chunks.map(_.size).compile.foldMonoid
+        _ <- logger.info(s">>>> Len: $n vs. $k")
+        _ = assertEquals(n, k)
       } yield ()
     }
   }

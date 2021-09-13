@@ -1,11 +1,11 @@
 package binny
 
-import scodec.bits.ByteVector
-
 import java.nio.file.{Files, Paths}
-import fs2.{Pipe, Stream}
 
 import scala.util.Try
+
+import fs2.{Pipe, Stream}
+import scodec.bits.ByteVector
 
 /** A way to detect the content type of some bytes. */
 trait ContentTypeDetect { self =>

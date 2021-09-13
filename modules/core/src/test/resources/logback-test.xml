@@ -5,6 +5,7 @@
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%t] %level %logger{0} - %message %xException%n</pattern>
         </encoder>
+        <immediateFlush>true</immediateFlush>
     </appender>
 
     <logger name="binny" level="all" />

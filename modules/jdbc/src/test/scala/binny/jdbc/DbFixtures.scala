@@ -1,12 +1,12 @@
 package binny.jdbc
 
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
+
 import binny.util.Logger
 import cats.effect.IO
 import com.dimafeng.testcontainers.JdbcDatabaseContainer
 import munit.CatsEffectSuite
-
-import java.util.concurrent.atomic.AtomicBoolean
 
 trait DbFixtures { self: CatsEffectSuite =>
 

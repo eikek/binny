@@ -1,30 +1,31 @@
 package binny.pglo.impl
 
 import java.security.MessageDigest
+
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.DbRun
 import binny.jdbc.impl.Implicits._
-import binny.util.{Logger}
-import cats.arrow.FunctionK
+import binny.util.Logger
 import cats.effect._
 import cats.implicits._
-import cats.~>
 import fs2.{Chunk, Stream}
 import org.postgresql.PGConnection
 import org.postgresql.largeobject.{LargeObject, LargeObjectManager}
 import scodec.bits.ByteVector
 
 final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
-  implicit private val log = logger
+  implicit private val log: Logger[F] = logger
 
   def createTable: DbRun[F, Int] =
-    DbRun.executeUpdate(s"""
-                           |CREATE TABLE IF NOT EXISTS "$table" (
-                           |  "file_id" varchar(254) NOT NULL PRIMARY KEY,
-                           |  "data_oid" oid
-                           |);
-                           |""".stripMargin)
+    DbRun.executeUpdate(
+      s"""
+         |CREATE TABLE IF NOT EXISTS "$table" (
+         |  "file_id" varchar(254) NOT NULL PRIMARY KEY,
+         |  "data_oid" oid
+         |);
+         |""".stripMargin
+    )
 
   def loManager: DbRun[F, LargeObjectManager] =
     DbRun.delay(_.unwrap(classOf[PGConnection]).getLargeObjectAPI)
@@ -40,14 +41,14 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
       _ <- DbRun.makeTX
       lom <- loManager.mapF(Resource.eval)
       oid <- createLO(lom).mapF(Resource.eval)
-      _ <- DbRun(_ => Resource.eval(logger.trace(s"Open lo ${oid} for writing")))
+      _ <- DbRun(_ => Resource.eval(logger.trace(s"Open lo $oid for writing")))
       lo <- DbRun.resource(_ => lom.open(oid))(_.close())
     } yield lo
 
   def openLORead(lom: LargeObjectManager, oid: Long): DbRun[Resource[F, *], LargeObject] =
     for {
       _ <- DbRun.makeTX
-      _ <- DbRun(_ => Resource.eval(logger.trace(s"Open lo ${oid} for reading")))
+      _ <- DbRun(_ => Resource.eval(logger.trace(s"Open lo $oid for reading")))
       lo <- DbRun.resource(_ => lom.open(oid, LargeObjectManager.READWRITE))(_.close())
     } yield lo
 
@@ -112,7 +113,7 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
           val buffer = new Array[Byte](chunkSize)
           var len = 0L
           val md = MessageDigest.getInstance("SHA-256")
-          var ct = (None: Option[SimpleContentType])
+          var ct = None: Option[SimpleContentType]
 
           var read: Int = -1
           while ({ read = obj.read(buffer, 0, buffer.length); read } > 0) {
@@ -131,38 +132,83 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
       )
     } yield attr
 
-  def load2(id: BinaryId, range: ByteRange, chunkSize: Int): DbRun[Stream[F, *], Byte] = {
+  def loadChunkByOID(oid: Long, range: ByteRange.Chunk): DbRun[F, Chunk[Byte]] = {
+    def readChunk(obj: LargeObject): F[Chunk[Byte]] =
+      Sync[F].blocking {
+        obj.seek64(range.offset, LargeObject.SEEK_SET)
+        val buf = obj.read(range.length)
+        Chunk.array(buf)
+      }
 
+    def load(lom: LargeObjectManager): DbRun[F, Chunk[Byte]] =
+      openLORead(lom, oid)
+        .use(readChunk)
+        .flatTap(ch => DbRun(_ => logger.trace(s"Got chunk from db: ${ch.size}")))
+
+    for {
+      lom <- loManager
+      res <- load(lom)
+    } yield res
+  }
+
+  def loadChunk(
+      id: BinaryId,
+      range: ByteRange.Chunk
+  ): DbRun[F, Chunk[Byte]] =
+    for {
+      _ <- DbRun(_ => logger.debug(s"Load ${id.id} single chunk $range"))
+      oid <- findOid(id)
+      res <- oid match {
+        case Some(id) => loadChunkByOID(id, range)
+        case None     => DbRun.pure[F, Chunk[Byte]](Chunk.empty)
+      }
+    } yield res
+
+  def loadAll(
+      id: BinaryId,
+      range: ByteRange,
+      chunkSize: Int
+  ): DbRun[Stream[F, *], Byte] = {
+    val offset = range.fold(0L, _.offset)
+    val targetLength = range.fold(None, _.length.some)
     def setLimits(obj: LargeObject): F[Unit] =
       range match {
         case ByteRange.All =>
           ().pure[F]
-        case ByteRange.Chunk(offset, length) =>
-          Sync[F].blocking {
-            obj.seek64(offset, LargeObject.SEEK_SET)
-            val len = length + offset
-            if (len < obj.size64()) {
-              obj.truncate64(len)
-            }
-          }
+        case ByteRange.Chunk(offset, _) =>
+          Sync[F].blocking(obj.seek64(offset, LargeObject.SEEK_SET))
       }
 
-    def readChunk2(obj: LargeObject): F[Chunk[Byte]] =
-      Sync[F].blocking(Chunk.array(obj.read(chunkSize)))
+    def readChunk(obj: LargeObject, len: Int): F[Chunk[Byte]] =
+      Sync[F].blocking(Chunk.array(obj.read(len)))
 
-    def readAll(obj: LargeObject) =
+    def readAll(obj: LargeObject): Stream[F, Byte] =
       Stream
-        .eval(readChunk2(obj))
+        .eval(Sync[F].blocking(obj.tell64()).map(pos => pos - offset))
+        .flatMap { bytesRead =>
+          val rest = math.min(
+            chunkSize,
+            targetLength.map(tl => (tl - bytesRead).toInt).getOrElse(chunkSize)
+          )
+          if (targetLength.exists(_ <= bytesRead)) Stream.emit(Chunk.empty)
+          else
+            Stream
+              .eval(readChunk(obj, rest))
+              .evalTap(ch => logger.trace(s"Got Chunk from db size: ${ch.size} ($range)"))
+        }
         .repeat
-        .takeThrough(_.nonEmpty)
+        .takeThrough(_.size == chunkSize)
         .flatMap(Stream.chunk)
 
     def load(lom: LargeObjectManager, oid: Long): DbRun[Stream[F, *], Byte] =
       openLORead(lom, oid).mapF(objRes =>
-        Stream.resource(objRes).flatMap(obj => Stream.eval(setLimits(obj)).drain ++ readAll(obj))
+        Stream
+          .resource(objRes)
+          .flatMap(obj => Stream.eval(setLimits(obj)).drain ++ readAll(obj))
       )
 
     for {
+      _ <- DbRun(_ => Stream.eval(logger.debug(s"Load ${id.id} range $range")))
       lom <- loManager.mapF(Stream.eval)
       oid <- findOid(id).mapF(Stream.eval)
       res <- oid match {
@@ -174,52 +220,6 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
     } yield res
   }
 
-  def load(id: BinaryId, range: ByteRange, chunkSize: Int): Stream[DbRun[F, *], Byte] = {
-    val data: Stream[DbRun[F, *], Stream[F, Byte]] =
-      for {
-        lom <- Stream.eval(loManager)
-        oid <- Stream.eval(findOid(id))
-        data <- Stream.eval(oid match {
-          case Some(id) =>
-            openLORead(lom, id).mapF(objRes =>
-              Sync[F].delay {
-                Stream
-                  .resource(objRes)
-                  .flatMap { obj =>
-                    range match {
-                      case ByteRange.All =>
-                        ()
-                      case ByteRange.Chunk(offset, length) =>
-                        obj.seek64(offset, LargeObject.SEEK_SET)
-                        val len = length + offset
-                        if (len < obj.size64()) {
-                          obj.truncate64(len)
-                        }
-                    }
-                    loToStream(obj, chunkSize)
-                  }
-              }
-            )
-
-          case None =>
-            DbRun.pure[F, Stream[F, Byte]](Stream.empty.covary[F])
-        })
-      } yield data
-
-    data.flatMap(_.translate(convert))
-  }
-
-  private def loToStream(obj: LargeObject, chunkSize: Int): Stream[F, Byte] =
-    Stream
-      .eval(
-        logger.trace(s"Fetching chunk for lo ${obj.getLongOID}") *> Sync[F]
-          .blocking(Chunk.array(obj.read(chunkSize)))
-          .flatTap(oc => logger.trace(s"Fetched chunk of size ${oc.size}"))
-      )
-      .repeat
-      .takeThrough(_.nonEmpty)
-      .flatMap(Stream.chunk)
-
-  private def convert: F ~> DbRun[F, *] =
-    λ[FunctionK[F, DbRun[F, *]]](fa => DbRun(_ => fa))
+//  private def convert: F ~> DbRun[F, *] =
+//    λ[FunctionK[F, DbRun[F, *]]](fa => DbRun(_ => fa))
 }
