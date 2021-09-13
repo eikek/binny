@@ -19,7 +19,7 @@ class S3BinaryStoreTest extends CatsEffectSuite with BinaryStoreAsserts {
   test("insert and load range") {
     for {
       data <- store.insertAndLoadRange(ExampleData.helloWorld, ByteRange(2, 5))
-      str  <- data.bytes.through(fs2.text.utf8.decode).foldMonoid.compile.lastOrError
+      str <- data.bytes.through(fs2.text.utf8.decode).foldMonoid.compile.lastOrError
       _ = assertEquals(str, "llo W")
     } yield ()
   }
@@ -32,6 +32,6 @@ class S3BinaryStoreTest extends CatsEffectSuite with BinaryStoreAsserts {
 object S3BinaryStoreTest {
   import cats.effect.unsafe.implicits._
 
-  private val store        = Config.store(S3KeyMapping.constant("testing"))
+  private val store = Config.store(S3KeyMapping.constant("testing"))
   private val minioPresent = Config.instancePresent(store.config).unsafeRunSync()
 }

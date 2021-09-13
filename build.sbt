@@ -183,7 +183,7 @@ lazy val tikaDetect = project
     name := "binny-tika-detect",
     description := "Detect content types using Apache Tika",
     libraryDependencies ++=
-      Dependencies.tikaCore ++ Dependencies.icu4j
+      Dependencies.tikaCore
   )
   .dependsOn(core)
 

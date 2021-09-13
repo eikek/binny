@@ -12,11 +12,11 @@ import cats.implicits._
 
 package object impl {
   type DbRun[F[_], A] = Kleisli[F, Connection, A]
-  type DbRunIO[A]     = DbRun[IO, A]
+  type DbRunIO[A] = DbRun[IO, A]
 
   object DbRun {
     implicit private[impl] def logger[F[_]: Sync]: Logger[F] = Logger.silent[F]
-    private[this] val counter                                = new AtomicLong(0)
+    private[this] val counter = new AtomicLong(0)
 
     def apply[F[_], A](f: Connection => F[A]): DbRun[F, A] =
       Kleisli(f)
@@ -54,8 +54,8 @@ package object impl {
       DbRun { conn =>
         val autoCommit =
           Resource.make(for {
-            c  <- Sync[F].delay(counter.getAndIncrement())
-            _  <- log.trace(s"Initiating transaction $c")
+            c <- Sync[F].delay(counter.getAndIncrement())
+            _ <- log.trace(s"Initiating transaction $c")
             ac <- setAutoCommit(false).run(conn)
           } yield ac)(ac => setAutoCommit(ac).run(conn).map(_ => ()))
 
@@ -115,7 +115,7 @@ package object impl {
     )(implicit log: Logger[F]): DbRun[Resource[F, *], ResultSet] =
       for {
         ps <- prepare(sql)
-        _  <- DbRun(_ => Resource.eval(Sync[F].delay(set(ps))))
+        _ <- DbRun(_ => Resource.eval(Sync[F].delay(set(ps))))
         rs <- executeQuery(ps)
       } yield rs
 

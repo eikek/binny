@@ -12,21 +12,21 @@ abstract class BasicAttributeStoreSuite[S <: BinaryAttributeStore[IO]]
   attrStore.test("save and find") { store =>
     for {
       attr <- ExampleData.helloWorldAttr
-      _    <- store.assertInsertAndFind(attr)
+      _ <- store.assertInsertAndFind(attr)
     } yield ()
   }
 
   attrStore.test("save and delete") { store =>
     for {
       attr <- ExampleData.helloWorldAttr
-      _    <- store.assertInsertAndDelete(attr)
+      _ <- store.assertInsertAndDelete(attr)
     } yield ()
   }
 
   attrStore.test("insert twice") { store =>
     for {
       attr <- ExampleData.helloWorldAttr
-      _    <- store.assertInsertTwice(attr)
+      _ <- store.assertInsertTwice(attr)
     } yield ()
   }
 }

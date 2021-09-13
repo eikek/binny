@@ -36,7 +36,7 @@ object Stopwatch {
       case fd: FiniteDuration =>
         val min = fd.toMinutes
         val sec = fd.minus(min.minutes).toSeconds
-        val ms  = fd.minus(min.minutes).minus(sec.seconds).toMillis
+        val ms = fd.minus(min.minutes).minus(sec.seconds).toMillis
         if (min > 0) f"$min%dmin $sec%02ds $ms%03dms"
         else f"$sec%ds $ms%03d ms"
       case d =>

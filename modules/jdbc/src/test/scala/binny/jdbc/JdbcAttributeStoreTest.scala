@@ -18,7 +18,7 @@ class JdbcAttributeStoreTest
   attrStore.test("insert attributes") { store =>
     for {
       attr <- ExampleData.helloWorldAttr
-      _    <- store.saveAttr(id, IO(attr))
+      _ <- store.saveAttr(id, IO(attr))
       att2 <- store.findAttr(id).value
       _ = assert(att2.isDefined)
       _ = assertEquals(att2, Some(attr))
@@ -28,21 +28,21 @@ class JdbcAttributeStoreTest
   attrStore.test("save and find") { store =>
     for {
       attr <- ExampleData.helloWorldAttr
-      _    <- store.assertInsertAndFind(attr)
+      _ <- store.assertInsertAndFind(attr)
     } yield ()
   }
 
   attrStore.test("save and delete") { store =>
     for {
       attr <- ExampleData.helloWorldAttr
-      _    <- store.assertInsertAndDelete(attr)
+      _ <- store.assertInsertAndDelete(attr)
     } yield ()
   }
 
   attrStore.test("insert twice") { store =>
     for {
       attr <- ExampleData.helloWorldAttr
-      _    <- store.assertInsertTwice(attr)
+      _ <- store.assertInsertTwice(attr)
     } yield ()
   }
 }

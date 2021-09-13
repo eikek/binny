@@ -46,7 +46,7 @@ class BinaryAttributesTest extends FunSuite {
       SimpleContentType.octetStream,
       5
     )
-    val str    = BinaryAttributes.asString(expect)
+    val str = BinaryAttributes.asString(expect)
     val loaded = BinaryAttributes.unsafeFromString(str)
     assertEquals(loaded, expect)
   }

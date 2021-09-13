@@ -35,7 +35,7 @@ final class FsBinaryStore[F[_]: Async](
     } yield ()
   }
 
-  def load(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] = {
+  def findBinary(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] = {
     val target = config.getTarget(id)
     Impl.load[F](id, target, range, config.chunkSize)
   }

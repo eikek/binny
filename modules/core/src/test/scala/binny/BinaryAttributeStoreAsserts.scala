@@ -9,7 +9,7 @@ trait BinaryAttributeStoreAsserts { self: CatsEffectSuite =>
 
     def assertInsertAndFind(attr: BinaryAttributes): IO[Unit] =
       for {
-        id   <- BinaryId.random[IO]
+        id <- BinaryId.random[IO]
         none <- bs.findAttr(id).value
         _ = assert(none.isEmpty)
         _ <- bs.saveAttr(id, IO(attr))
@@ -20,8 +20,8 @@ trait BinaryAttributeStoreAsserts { self: CatsEffectSuite =>
     def assertInsertAndDelete(attr: BinaryAttributes): IO[Unit] =
       for {
         id <- BinaryId.random[IO]
-        _  <- bs.saveAttr(id, IO(attr))
-        a  <- bs.findAttr(id).value
+        _ <- bs.saveAttr(id, IO(attr))
+        a <- bs.findAttr(id).value
         _ = assertEquals(a, Some(attr))
         _ <- bs.deleteAttr(id)
         b <- bs.findAttr(id).value
@@ -31,7 +31,7 @@ trait BinaryAttributeStoreAsserts { self: CatsEffectSuite =>
     def assertInsertTwice(attr: BinaryAttributes): IO[Unit] =
       for {
         id <- BinaryId.random[IO]
-        _  <- bs.saveAttr(id, IO(attr))
+        _ <- bs.saveAttr(id, IO(attr))
         attr2 = attr.copy(contentType = SimpleContentType("application/json"))
         _ <- bs.saveAttr(id, IO(attr2))
         a <- bs.findAttr(id).value

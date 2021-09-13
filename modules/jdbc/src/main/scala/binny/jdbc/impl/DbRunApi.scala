@@ -2,18 +2,18 @@ package binny.jdbc.impl
 
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
-
 import scala.util.Using
-
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.Implicits._
-import binny.util.Logger
+import binny.util.{Logger, RangeCalc}
 import cats.effect._
 import cats.implicits._
 import fs2.Chunk
 import fs2.Stream
 import scodec.bits.ByteVector
+
+import java.sql.ResultSet
 
 final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
   implicit private val log = logger
@@ -94,6 +94,52 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
       }
       .use(DbRun.readOpt[F, Chunk[Byte]](rs => Chunk.array(rs.getBytes(1))))
 
+  def queryAll(
+      id: BinaryId,
+      range: ByteRange,
+      chunkSize: Int
+  ): DbRun[Stream[F, *], Byte] = {
+    val offsets = RangeCalc.calcOffset(range, chunkSize)
+    val all = range match {
+      case ByteRange.All =>
+        DbRun.query(
+          s"SELECT chunk_data FROM $table WHERE file_id = ? ORDER BY chunk_nr ASC"
+        )(_.setString(1, id.id))
+      case ByteRange.Chunk(_, _) =>
+        DbRun.query(
+          s"SELECT chunk_data,chunk_nr FROM $table WHERE file_id = ? AND chunk_nr >= ? AND chunk_nr <= ? ORDER BY chunk_nr ASC"
+        ) { stmt =>
+          stmt.setString(1, id.id)
+          stmt.setInt(2, offsets.firstChunk)
+          stmt.setInt(3, offsets.lastChunk)
+        }
+    }
+
+    def readRow(rs: ResultSet, buf: Array[Byte]): F[Chunk[Byte]] =
+      Sync[F].blocking(if (rs.next) rs.getBinaryStream(1).read(buf) else -1).map {
+        case n if n <= 0  => Chunk.empty
+        case n if n < buf.length =>
+          val ch = Chunk.array(buf, 0, n)
+          if (offsets.isNone) ch
+          else RangeCalc.chop(ch, offsets, rs.getInt(2))
+        case _ =>
+          val ch = Chunk.array(buf)
+          if (offsets.isNone) ch
+          else RangeCalc.chop(ch, offsets, rs.getInt(2))
+      }
+
+    def useResultSet(rs: ResultSet, buf: F[Array[Byte]]): Stream[F, Byte] =
+      Stream
+        .eval(buf.flatMap(b => readRow(rs, b)))
+        .repeat
+        .takeThrough(_.nonEmpty)
+        .flatMap(Stream.chunk)
+
+    val newBuf = Sync[F].delay(new Array[Byte](chunkSize))
+
+    all.mapF(rsRes => Stream.resource(rsRes).flatMap(useResultSet(_, newBuf)))
+  }
+
   def computeAttr(
       id: BinaryId,
       detect: ContentTypeDetect,
@@ -104,9 +150,9 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
       Using.resource(conn.prepareStatement(sql)) { ps =>
         ps.setString(1, id.id)
         Using.resource(ps.executeQuery()) { rs =>
-          var len                           = 0L
-          val md                            = MessageDigest.getInstance("SHA-256")
-          var ct: Option[SimpleContentType] = None
+          var len = 0L
+          val md = MessageDigest.getInstance("SHA-256")
+          var ct = None: Option[SimpleContentType]
           while (rs.next()) {
             val data = rs.getBytes(1)
             md.update(data)

@@ -10,7 +10,7 @@ trait BinaryStore[F[_]] extends ReadonlyStore[F] with ReadonlyAttributeStore[F] 
   def insert(data: Stream[F, Byte], hint: Hint)(implicit F: Sync[F]): F[BinaryId] =
     for {
       id <- BinaryId.random[F]
-      _  <- insertWith(BinaryData(id, data), hint)
+      _ <- insertWith(BinaryData(id, data), hint)
     } yield id
 
   def insertWith(data: BinaryData[F], hint: Hint): F[Unit]

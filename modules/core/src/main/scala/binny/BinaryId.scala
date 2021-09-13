@@ -23,7 +23,7 @@ object BinaryId {
   }
 
   private def randomBytes(len: Int): Array[Byte] = {
-    val rnd   = new SecureRandom()
+    val rnd = new SecureRandom()
     val array = new Array[Byte](len)
     rnd.nextBytes(array)
     array

@@ -15,10 +15,10 @@ trait PgStoreFixtures { self: CatsEffectSuite =>
   ): PgLoBinaryStore[IO] = {
     implicit val log = logger
 
-    val cc        = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val ds        = cc.dataSource
+    val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
+    val ds = cc.dataSource
     val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
-    val store     = PgLoBinaryStore[IO](cfg, logger, cc.dataSource, attrStore)
+    val store = PgLoBinaryStore[IO](cfg, logger, cc.dataSource, attrStore)
     DatabaseSetup
       .runAttr[IO](
         Dbms.PostgreSQL,

@@ -99,13 +99,13 @@ final private[s3] class Minio[F[_]: Sync](client: MinioClient) {
         .`object`(key.objectName)
         .build()
 
-      val md  = MessageDigest.getInstance("SHA-256")
+      val md = MessageDigest.getInstance("SHA-256")
       var len = 0L
-      var ct  = (None: Option[SimpleContentType])
+      var ct = (None: Option[SimpleContentType])
       val buf = new Array[Byte](chunkSize)
 
       var read = -1
-      val in   = client.getObject(args)
+      val in = client.getObject(args)
       while ({ read = in.read(buf); read } > 0) {
         md.update(buf, 0, read)
         len = len + read

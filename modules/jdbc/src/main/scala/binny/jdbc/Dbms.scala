@@ -10,5 +10,5 @@ sealed trait Dbms extends Product {
 object Dbms {
 
   case object PostgreSQL extends Dbms
-  case object MariaDB    extends Dbms
+  case object MariaDB extends Dbms
 }

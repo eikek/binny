@@ -51,7 +51,7 @@ class PgLoBinaryStoreTest
 
       for {
         data <- store.insertAndLoadRange(ExampleData.helloWorld, ByteRange(2, 5))
-        str  <- data.bytes.through(fs2.text.utf8.decode).foldMonoid.compile.lastOrError
+        str <- data.bytes.through(fs2.text.utf8.decode).foldMonoid.compile.lastOrError
         _ = assertEquals(str, "llo W")
       } yield ()
     }

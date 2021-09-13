@@ -18,7 +18,7 @@ final class S3BinaryStore[F[_]: Async](
   private val minio = new Minio[F](client)
 
   def insertWith(data: BinaryData[F], hint: ContentTypeDetect.Hint): F[Unit] = {
-    val key      = config.keyMapping(data.id)
+    val key = config.keyMapping(data.id)
     val inStream = data.bytes.through(fs2.io.toInputStream)
     val upload =
       for {
@@ -45,11 +45,11 @@ final class S3BinaryStore[F[_]: Async](
     val key = config.keyMapping(id)
     for {
       exists <- minio.statObject(key)
-      _      <- if (exists) minio.deleteObject(key) else ().pure[F]
+      _ <- if (exists) minio.deleteObject(key) else ().pure[F]
     } yield exists
   }
 
-  def load(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] = {
+  def findBinary(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] = {
     val key = config.keyMapping(id)
     OptionT(minio.statObject(key).map {
       case true  => Some(BinaryData(id, dataStream(key, range)))

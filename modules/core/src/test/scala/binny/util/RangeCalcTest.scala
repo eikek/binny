@@ -15,7 +15,7 @@ class RangeCalcTest extends FunSuite {
     assertEquals(offsets.takeEnd, 120)
 
     val chunk = Chunk.vector(Vector.range(0, 200).map(_.toByte))
-    val ch    = RangeCalc.chop(chunk, offsets, 0)
+    val ch = RangeCalc.chop(chunk, offsets, 0)
     assertEquals(ch.size, 120)
     assertEquals(ch, Chunk.vector(Vector.range(24, 144).map(_.toByte)))
   }
@@ -66,7 +66,31 @@ class RangeCalcTest extends FunSuite {
     assertEquals(offsets.takeEnd, 10)
 
     val chunk = Chunk.vector(Vector.range(0, 20).map(_.toByte))
-    val fc    = RangeCalc.chop(chunk, offsets, offsets.firstChunk)
+    val fc = RangeCalc.chop(chunk, offsets, offsets.firstChunk)
     assertEquals(fc.size, 10)
   }
+
+  test("calcChunks with rest") {
+    assertEquals(
+      RangeCalc.calcChunks(ByteRange(10, 70), 20).toVector,
+      Vector(chunk(10, 20), chunk(30, 20), chunk(50, 20), chunk(70, 10))
+    )
+  }
+
+  test("calcChunks no rest") {
+    assertEquals(
+      RangeCalc.calcChunks(ByteRange(10, 60), 20).toVector,
+      Vector(chunk(10, 20), chunk(30, 20), chunk(50, 20))
+    )
+  }
+
+  test("calcChunks small range") {
+    assertEquals(
+      RangeCalc.calcChunks(ByteRange(5, 10), 2000).toVector,
+      Vector(chunk(5, 10))
+    )
+  }
+
+  def chunk(offset: Int, len: Int): ByteRange.Chunk =
+    ByteRange.Chunk(offset, len)
 }

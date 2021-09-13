@@ -13,8 +13,8 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
     def assertInsertAndLoad(data: Stream[IO, Byte]): IO[Unit] =
       for {
         givenSha <- data.through(fs2.hash.sha256).chunks.head.compile.lastOrError
-        id       <- bs.insert(data, Hint.none)
-        elOpt    <- bs.load(id, ByteRange.All).value
+        id <- bs.insert(data, Hint.none)
+        elOpt <- bs.findBinary(id, ByteRange.All).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
         elAttr <- el.computeAttributes(ContentTypeDetect.none, Hint.none)
         _ = self.assertEquals(elAttr.sha256, givenSha.toByteVector)
@@ -22,8 +22,8 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
 
     def insertAndLoadRange(data: Stream[IO, Byte], range: ByteRange): IO[BinaryData[IO]] =
       for {
-        id    <- bs.insert(data, Hint.none)
-        elOpt <- bs.load(id, range).value
+        id <- bs.insert(data, Hint.none)
+        elOpt <- bs.findBinary(id, range).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
       } yield el
 
@@ -41,23 +41,23 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
         id <- Stopwatch.wrap(d => log.debug(s"Insert larger file took: $d")) {
           bs.insert(data, Hint.none)
         }
-        w     <- Stopwatch.start[IO]
-        elOpt <- bs.load(id, ByteRange.All).value
+        w <- Stopwatch.start[IO]
+        elOpt <- bs.findBinary(id, ByteRange.All).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
         elAttr <- el.computeAttributes(ContentTypeDetect.none, Hint.none)
-        _      <- Stopwatch.show(w)(d => log.debug(s"Loading and sha256 took: $d"))
+        _ <- Stopwatch.show(w)(d => log.debug(s"Loading and sha256 took: $d"))
         _ = self.assertEquals(elAttr.sha256, givenSha.toByteVector)
       } yield ()
     }
 
     def assertInsertAndDelete(): IO[Unit] =
       for {
-        id   <- bs.insert(ExampleData.helloWorld[IO], Hint.none)
-        file <- bs.load(id, ByteRange.All).value
+        id <- bs.insert(ExampleData.helloWorld[IO], Hint.none)
+        file <- bs.findBinary(id, ByteRange.All).value
         _ = assert(file.isDefined)
         deleted <- bs.delete(id)
         _ = assert(deleted)
-        file2 <- bs.load(id, ByteRange.All).value
+        file2 <- bs.findBinary(id, ByteRange.All).value
         _ = assert(file2.isEmpty)
       } yield ()
   }

@@ -25,23 +25,23 @@ object CreateDataTable {
 
   def postgresData[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate[F](s"""
-        |CREATE TABLE IF NOT EXISTS "${name}" (
-        |  file_id varchar(254) not null,
-        |  chunk_nr int not null,
-        |  chunk_len int not null,
-        |  chunk_data bytea not null,
-        |  primary key (file_id, chunk_nr)
-        |)""".stripMargin)
+                              |CREATE TABLE IF NOT EXISTS "${name}" (
+                              |  file_id varchar(254) not null,
+                              |  chunk_nr int not null,
+                              |  chunk_len int not null,
+                              |  chunk_data bytea not null,
+                              |  primary key (file_id, chunk_nr)
+                              |)""".stripMargin)
 
   def postgresAttr[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate(s"""
-         |CREATE TABLE IF NOT EXISTS "${name}" (
-         |  file_id varchar(254) not null,
-         |  sha256 varchar(254) not null,
-         |  content_type varchar(254) not null,
-         |  length bigint not null,
-         |  primary key (file_id)
-         |)""".stripMargin)
+                           |CREATE TABLE IF NOT EXISTS "${name}" (
+                           |  file_id varchar(254) not null,
+                           |  sha256 varchar(254) not null,
+                           |  content_type varchar(254) not null,
+                           |  length bigint not null,
+                           |  primary key (file_id)
+                           |)""".stripMargin)
 
   def postgresFK[F[_]: Sync](
       dataTable: String,
@@ -53,13 +53,13 @@ object CreateDataTable {
 
   def mariadbData[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate(s"""
-         |CREATE TABLE ${name} (
-         |  file_id varchar(254) not null,
-         |  chunk_nr int not null,
-         |  chunk_len int not null,
-         |  chunk_data mediumblob not null,
-         |  primary key (file_id, chunk_nr)
-         |)""".stripMargin)
+                           |CREATE TABLE ${name} (
+                           |  file_id varchar(254) not null,
+                           |  chunk_nr int not null,
+                           |  chunk_len int not null,
+                           |  chunk_data mediumblob not null,
+                           |  primary key (file_id, chunk_nr)
+                           |)""".stripMargin)
 
   def mariadbAttr[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     postgresAttr(name)

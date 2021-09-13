@@ -1,11 +1,11 @@
 package binny
 
-/** A content type as a String. A proper model for content types is
-  * beyond the scope of this library
+/** A content type as a String. A proper model for content types is beyond the scope of
+  * this library
   */
 final class SimpleContentType private (val contentType: String) extends AnyVal {
 
-  def or(other: SimpleContentType): SimpleContentType =
+  def or(other: => SimpleContentType): SimpleContentType =
     if (contentType.startsWith(SimpleContentType.octetStream.contentType)) other
     else this
 

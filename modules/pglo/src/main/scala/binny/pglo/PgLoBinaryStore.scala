@@ -1,8 +1,6 @@
 package binny.pglo
 
-import java.sql.Connection
 import javax.sql.DataSource
-
 import binny._
 import binny.jdbc.impl.DataSourceResource
 import binny.jdbc.impl.Implicits._
@@ -12,6 +10,8 @@ import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.Stream
+
+import java.sql.Connection
 
 final class PgLoBinaryStore[F[_]: Sync](
     val config: PgLoConfig,
@@ -24,7 +24,7 @@ final class PgLoBinaryStore[F[_]: Sync](
   def insertWith(data: BinaryData[F], hint: ContentTypeDetect.Hint): F[Unit] =
     for {
       insertTime <- Stopwatch.start[F]
-      _          <- pg.insert(data.id, data.bytes.chunkN(config.chunkSize)).execute(ds)
+      _ <- pg.insert(data.id, data.bytes.chunkN(config.chunkSize)).execute(ds)
       _ <- Stopwatch.show(insertTime)(d =>
         logger.trace(s"Inserting bytes for ${data.id.id} took: $d")
       )
@@ -49,13 +49,31 @@ final class PgLoBinaryStore[F[_]: Sync](
       _ <- Stopwatch.show(w)(d => logger.info(s"Deleting ${id.id} took $d"))
     } yield n > 0
 
-  def load(
+  def findBinary(
+      id: BinaryId,
+      range: ByteRange
+  ): OptionT[F, BinaryData[F]] =
+    findBinaryStateful(id, range)
+//  {
+//    val bytes =
+//      RangeCalc
+//        .calcChunks(range, config.chunkSize)
+//        .flatMap(r => byteStream(id, r))
+//    OptionT(pg.findOid(id).execute(ds)).map(_ => BinaryData(id, bytes))
+//  }
+
+  def findBinaryStateful(
       id: BinaryId,
       range: ByteRange
   ): OptionT[F, BinaryData[F]] =
     OptionT(pg.findOid(id).execute(ds)).map(_ => BinaryData(id, byteStream(id, range)))
 
   private def byteStream(id: BinaryId, range: ByteRange): Stream[F, Byte] = {
+//    val data = pg.load2(id, range, config.chunkSize)
+//    Stream
+//      .resource(DataSourceResource(ds))
+//      .flatMap(data.run)
+
     val data = pg.load(id, range, config.chunkSize)
     Stream
       .resource(DataSourceResource(ds))

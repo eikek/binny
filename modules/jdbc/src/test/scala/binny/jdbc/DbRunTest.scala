@@ -12,7 +12,7 @@ import org.log4s.getLogger
 class DbRunTest extends CatsEffectSuite with DbFixtures {
   implicit private[this] val logger = Log4sLogger[IO](getLogger)
 
-  val config                             = JdbcStoreConfig.default
+  val config = JdbcStoreConfig.default
   val dataSource: FunFixture[DataSource] = h2MemoryDataSource
 
   dataSource.test("hasNext on empty table") { ds =>

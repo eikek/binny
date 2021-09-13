@@ -1,7 +1,5 @@
 package binny.tika
 
-import java.nio.charset.Charset
-
 import binny.ContentTypeDetect.Hint
 import binny.{ContentTypeDetect, SimpleContentType}
 import org.apache.tika.config.TikaConfig
@@ -30,33 +28,12 @@ object TikaContentTypeDetect {
     md
   }
 
-  private def charsetFromBytes(bv: Array[Byte], hint: Hint): Option[Charset] =
-    //val detector = new CharsetDetector()
-    ???
-
   private def fromBytes(
       tika: Detector,
       bv: Array[Byte],
       hint: Hint
-  ): SimpleContentType = {
-    val mt = convert(
-      tika.detect(new java.io.ByteArrayInputStream(bv), makeMetadata(hint))
-    )
-    if (mt.isText)
-      charsetFromBytes(bv, hint) match {
-        case Some(cs) =>
-          Option(MediaType.parse(mt.contentType)) match {
-            case Some(mediaType) =>
-              val nm = new MediaType(mediaType, cs)
-              SimpleContentType(nm.toString)
-            case None =>
-              mt
-          }
-        case None =>
-          mt
-      }
-    else mt
-  }
+  ): SimpleContentType =
+    convert(tika.detect(new java.io.ByteArrayInputStream(bv), makeMetadata(hint)))
 
   private def convert(mt: MediaType): SimpleContentType =
     Option(mt) match {
@@ -65,5 +42,4 @@ object TikaContentTypeDetect {
       case None =>
         SimpleContentType.octetStream
     }
-
 }

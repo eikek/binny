@@ -1,9 +1,8 @@
 package binny.jdbc
 
 import javax.sql.DataSource
-
 import binny._
-import binny.jdbc.impl.DbRunApi
+import binny.jdbc.impl.{DataSourceResource, DbRunApi}
 import binny.jdbc.impl.Implicits._
 import binny.util.{Logger, RangeCalc, Stopwatch}
 import cats.data.OptionT
@@ -19,7 +18,7 @@ final class JdbcBinaryStore[F[_]: Sync](
 ) extends BinaryStore[F] {
 
   implicit private val log: Logger[F] = logger
-  private[this] val dataApi           = new DbRunApi[F](config.dataTable, logger)
+  private[this] val dataApi = new DbRunApi[F](config.dataTable, logger)
 
   def insertWith(data: BinaryData[F], hint: ContentTypeDetect.Hint): F[Unit] = {
     val inserts =
@@ -89,13 +88,37 @@ final class JdbcBinaryStore[F[_]: Sync](
           .flatMap(Stream.chunk)
     }
 
-  def load(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] =
+  private def dataStreamSingleConn(id: BinaryId, range: ByteRange): Stream[F, Byte] =
+    Stream
+      .resource(DataSourceResource[F](ds))
+      .flatMap(dataApi.queryAll(id, range, config.chunkSize).run)
+
+  /** Finds a binary by its id. The data stream loads the bytes chunk-wise from the
+    * database, where on each chunk the connection to the database is closed. This is
+    * safer when the stream is running for some time to avoid the server closing the
+    * connection due to timeouts.
+    */
+  def findBinary(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] =
     OptionT(
       dataApi
         .exists(id)
         .execute(ds)
         .map(exists =>
           if (exists) Some(BinaryData[F](id, dataStream(id, range))) else None
+        )
+    )
+
+  /** Finds a binary by its id. This uses one connection to stream the entire file. Thus
+    * the connection is only closed when the stream terminates. This is useful for small
+    * files or when only a small portion of a file is requested.
+    */
+  def findBinaryStateful(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] =
+    OptionT(
+      dataApi
+        .exists(id)
+        .execute(ds)
+        .map(exists =>
+          if (exists) Some(BinaryData[F](id, dataStreamSingleConn(id, range))) else None
         )
     )
 

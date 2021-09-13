@@ -10,7 +10,7 @@ trait FsFixtures { self: CatsEffectSuite =>
   lazy val binStore = ResourceFixture(for {
     dir <- Files[IO].tempDirectory(Some(Path("target")), "binny-fs-bs-", None)
     logger = Log4sLogger[IO](org.log4s.getLogger("FsBinaryStore"))
-    store  = FsBinaryStore.default[IO](logger, dir)
+    store = FsBinaryStore.default[IO](logger, dir)
   } yield store)
 
   lazy val attrStore = ResourceFixture(for {
