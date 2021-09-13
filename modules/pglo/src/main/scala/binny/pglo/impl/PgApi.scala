@@ -1,12 +1,11 @@
 package binny.pglo.impl
 
 import java.security.MessageDigest
-
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.DbRun
 import binny.jdbc.impl.Implicits._
-import binny.util.Logger
+import binny.util.{Logger}
 import cats.arrow.FunctionK
 import cats.effect._
 import cats.implicits._
@@ -133,6 +132,7 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
     } yield attr
 
   def load2(id: BinaryId, range: ByteRange, chunkSize: Int): DbRun[Stream[F, *], Byte] = {
+
     def setLimits(obj: LargeObject): F[Unit] =
       range match {
         case ByteRange.All =>
@@ -140,7 +140,10 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
         case ByteRange.Chunk(offset, length) =>
           Sync[F].blocking {
             obj.seek64(offset, LargeObject.SEEK_SET)
-            obj.truncate64(length + offset)
+            val len = length + offset
+            if (len < obj.size64()) {
+              obj.truncate64(len)
+            }
           }
       }
 
@@ -188,7 +191,10 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
                         ()
                       case ByteRange.Chunk(offset, length) =>
                         obj.seek64(offset, LargeObject.SEEK_SET)
-                        obj.truncate64(length + offset)
+                        val len = length + offset
+                        if (len < obj.size64()) {
+                          obj.truncate64(len)
+                        }
                     }
                     loToStream(obj, chunkSize)
                   }

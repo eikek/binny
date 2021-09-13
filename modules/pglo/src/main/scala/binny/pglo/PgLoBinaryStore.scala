@@ -6,12 +6,10 @@ import binny.jdbc.impl.DataSourceResource
 import binny.jdbc.impl.Implicits._
 import binny.pglo.impl.PgApi
 import binny.util.{Logger, Stopwatch}
-import cats.data.{Kleisli, OptionT}
+import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
 import fs2.Stream
-
-import java.sql.Connection
 
 final class PgLoBinaryStore[F[_]: Sync](
     val config: PgLoConfig,
@@ -58,7 +56,10 @@ final class PgLoBinaryStore[F[_]: Sync](
 //    val bytes =
 //      RangeCalc
 //        .calcChunks(range, config.chunkSize)
-//        .flatMap(r => byteStream(id, r))
+//        .flatMap(r =>{
+//          println(s">>>>> range: $r")
+//          byteStream(id, r)
+//        })
 //    OptionT(pg.findOid(id).execute(ds)).map(_ => BinaryData(id, bytes))
 //  }
 
@@ -69,15 +70,15 @@ final class PgLoBinaryStore[F[_]: Sync](
     OptionT(pg.findOid(id).execute(ds)).map(_ => BinaryData(id, byteStream(id, range)))
 
   private def byteStream(id: BinaryId, range: ByteRange): Stream[F, Byte] = {
-//    val data = pg.load2(id, range, config.chunkSize)
-//    Stream
-//      .resource(DataSourceResource(ds))
-//      .flatMap(data.run)
-
-    val data = pg.load(id, range, config.chunkSize)
+    val data = pg.load2(id, range, config.chunkSize)
     Stream
       .resource(DataSourceResource(ds))
-      .flatMap(conn => data.translate(Kleisli.applyK[F, Connection](conn)))
+      .flatMap(data.run)
+
+//    val data = pg.load(id, range, config.chunkSize)
+//    Stream
+//      .resource(DataSourceResource(ds))
+//      .flatMap(conn => data.translate(Kleisli.applyK[F, Connection](conn)))
   }
 
   def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =

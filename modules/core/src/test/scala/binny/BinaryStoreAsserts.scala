@@ -3,7 +3,7 @@ package binny
 import binny.ContentTypeDetect.Hint
 import binny.util.Stopwatch
 import cats.effect._
-import fs2.{Chunk, Stream}
+import fs2.Stream
 import munit.CatsEffectSuite
 
 trait BinaryStoreAsserts { self: CatsEffectSuite =>
@@ -32,7 +32,7 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
         .emit("abcdefghijklmnopqrstuvwxyz")
         .repeat
         .take(20000)
-        .flatMap(str => Stream.chunk(Chunk.array(str.getBytes)))
+        .through(fs2.text.utf8.encode)
         .covary[IO]
         .buffer(32 * 1024)
       val log = Log4sLogger[IO](org.log4s.getLogger)
@@ -44,6 +44,9 @@ trait BinaryStoreAsserts { self: CatsEffectSuite =>
         w <- Stopwatch.start[IO]
         elOpt <- bs.findBinary(id, ByteRange.All).value
         el = elOpt.getOrElse(sys.error("Binary not found"))
+        n <- el.bytes.chunks.map(_.size).compile.foldMonoid
+        k <- data.chunks.map(_.size).compile.foldMonoid
+        _ <- log.info(s">>>> Len: $n vs. $k")
         elAttr <- el.computeAttributes(ContentTypeDetect.none, Hint.none)
         _ <- Stopwatch.show(w)(d => log.debug(s"Loading and sha256 took: $d"))
         _ = self.assertEquals(elAttr.sha256, givenSha.toByteVector)

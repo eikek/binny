@@ -1,5 +1,6 @@
 package binny.pglo
 
+import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.Docker
 import binny.util.Stopwatch
@@ -25,22 +26,54 @@ class PgLoBinaryStoreTest
 
   assume(Docker.existsUnsafe, "docker not present")
 
+  test("whats going on") {
+    val data = ExampleData.helloWorld
+    withContainers { cnt =>
+      val store = makeBinStore(cnt, logger, config)
+
+      for {
+        id <- store.insert(data, Hint.none)
+        elOpt <- store.findBinary(id, ByteRange.All).value
+        el = elOpt.getOrElse(sys.error("Binary not found"))
+        elStr <- el.readUtf8String.compile.lastOrError
+        _ <- logger.info(s"bytes: ${elStr.getBytes.length}")
+        _ = assertEquals(elStr, "Hello World!")
+      } yield ()
+    }
+  }
+
   test("insert and load") {
     withContainers { cnt =>
       val store = makeBinStore(cnt, logger, config)
 
       for {
-        w <- Stopwatch.start[IO]
         _ <- Stopwatch.wrap(d => logger.info(s"Test1: $d")) {
           store.assertInsertAndLoad(ExampleData.helloWorld)
         }
+      } yield ()
+    }
+  }
+
+  test("insert and load empty") {
+    withContainers { cnt =>
+      val store = makeBinStore(cnt, logger, config)
+
+      for {
         _ <- Stopwatch.wrap(d => logger.info(s"Test2: $d")) {
           store.assertInsertAndLoad(ExampleData.empty[IO])
         }
+      } yield ()
+    }
+  }
+
+  test("insert and load larger file") {
+    withContainers { cnt =>
+      val store = makeBinStore(cnt, logger, config)
+
+      for {
         _ <- Stopwatch.wrap(d => logger.info(s"Test3: $d")) {
           store.assertInsertAndLoadLargerFile()
         }
-        _ <- Stopwatch.show(w)(d => logger.info(s"Tests took: $d"))
       } yield ()
     }
   }
