@@ -1,15 +1,18 @@
 package binny.minio
 
-import binny.spec.BinaryStoreSpec
+import binny.spec.BinaryStore2Spec
 import cats.effect._
 import com.dimafeng.testcontainers.munit.TestContainerForAll
+import munit.CatsEffectSuite
 
 class MinioBinaryStoreTest
-    extends BinaryStoreSpec[MinioBinaryStore[IO]]
+    extends CatsEffectSuite
+    with BinaryStore2Spec[MinioBinaryStore[IO]]
     with TestContainerForAll {
 
-  lazy val binStore: SyncIO[FunFixture[MinioBinaryStore[IO]]] =
-    ResourceFixture(
+  lazy val binStore: Fixture[MinioBinaryStore[IO]] =
+    ResourceSuiteLocalFixture(
+      "minio-store",
       Resource
         .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
         .map(cnt =>
@@ -22,6 +25,8 @@ class MinioBinaryStoreTest
     )
 
   override val containerDef: MinioContainer.Def = new MinioContainer.Def
+
+  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
 
 }
 

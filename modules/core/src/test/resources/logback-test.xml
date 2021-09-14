@@ -8,7 +8,7 @@
         <immediateFlush>true</immediateFlush>
     </appender>
 
-    <logger name="binny" level="all" />
+    <logger name="binny" level="warn" />
 
     <root level="ERROR">
         <appender-ref ref="STDOUT" />

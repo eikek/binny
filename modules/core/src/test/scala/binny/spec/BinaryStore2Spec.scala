@@ -6,20 +6,21 @@ import binny.Binary.Implicits._
 import binny.ContentTypeDetect.Hint
 import binny._
 import binny.util.Stopwatch
-import cats.effect.{IO, SyncIO}
+import cats.effect.IO
 import fs2.Stream
 import munit.CatsEffectSuite
 
-abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
+trait BinaryStore2Spec[S <: BinaryStore[IO]] { self: CatsEffectSuite =>
 
-  private[this] val logger = Log4sLogger[IO](org.log4s.getLogger)
-  val binStore: SyncIO[FunFixture[S]]
+  val logger = Log4sLogger[IO](org.log4s.getLogger)
+  val binStore: Fixture[S]
 
   val hint: Hint = Hint.none
   val md = MessageDigest.getInstance("SHA-256")
   def noFileError: Binary[IO] = sys.error("No binary found")
 
-  binStore.test("insert and load") { store =>
+  test("insert and load") {
+    val store = binStore()
     Stream(ExampleData.helloWorld, Binary.empty, ExampleData.file2M.take(2203))
       .flatMap(data =>
         for {
@@ -38,7 +39,8 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
       .drain
   }
 
-  binStore.test("insert and load large file") { store =>
+  test("insert and load large file") {
+    val store = binStore()
     (for {
       w <- Stream.eval(Stopwatch.start[IO])
       id <- ExampleData.file2M.through(store.insert(hint))
@@ -49,7 +51,8 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
     } yield ()).compile.drain
   }
 
-  binStore.test("load small range") { store =>
+  test("load small range") {
+    val store = binStore()
     (for {
       id <- ExampleData.helloWorld[IO].through(store.insert(hint))
       bin <- Stream.eval(store.findBinary(id, ByteRange(2, 5)).getOrElse(noFileError))
@@ -58,7 +61,8 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
     } yield ()).compile.drain
   }
 
-  binStore.test("delete") { store =>
+  test("delete") {
+    val store = binStore()
     (for {
       id <- ExampleData.helloWorld[IO].through(store.insert(hint))
       _ <- Stream.eval(store.findBinary(id, ByteRange.All).getOrElse(noFileError))

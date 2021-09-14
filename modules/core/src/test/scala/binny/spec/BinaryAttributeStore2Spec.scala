@@ -1,15 +1,15 @@
 package binny.spec
 
 import binny._
-import cats.effect.{IO, SyncIO}
+import cats.effect.IO
 import munit.CatsEffectSuite
 
-abstract class BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]]
-    extends CatsEffectSuite {
+trait BinaryAttributeStore2Spec[S <: BinaryAttributeStore[IO]] { self: CatsEffectSuite =>
 
-  val attrStore: SyncIO[FunFixture[S]]
+  val attrStore: Fixture[S]
 
-  attrStore.test("save and find") { store =>
+  test("attributes: save and find") {
+    val store = attrStore()
     for {
       attr <- ExampleData.helloWorldAttr
       id <- BinaryId.random[IO]
@@ -22,7 +22,8 @@ abstract class BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]]
     } yield ()
   }
 
-  attrStore.test("save and delete") { store =>
+  test("attributes: save and delete") {
+    val store = attrStore()
     for {
       attr <- ExampleData.helloWorldAttr
       id <- BinaryId.random[IO]
@@ -35,7 +36,8 @@ abstract class BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]]
     } yield ()
   }
 
-  attrStore.test("insert twice") { store =>
+  test("attributes: insert twice") {
+    val store = attrStore()
     for {
       attr <- ExampleData.helloWorldAttr
       id <- BinaryId.random[IO]

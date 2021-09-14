@@ -1,26 +1,25 @@
 package binny.pglo
 
-import binny._
 import binny.jdbc.Docker
-import binny.spec.BinaryStoreSpec
+import binny.spec.BinaryStore2Spec
 import cats.effect._
 import com.dimafeng.testcontainers.PostgreSQLContainer
-import org.log4s.getLogger
+import munit.CatsEffectSuite
 import org.testcontainers.utility.DockerImageName
 
 class PgLoBinaryStoreTest
-    extends BinaryStoreSpec[PgLoBinaryStore[IO]]
+    extends CatsEffectSuite
+    with BinaryStore2Spec[PgLoBinaryStore[IO]]
     with PgStoreFixtures {
-
-  implicit private[this] val logger = Log4sLogger[IO](getLogger)
 
   val config = PgLoConfig.default.copy(chunkSize = 210 * 1024)
 
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))
 
-  override lazy val binStore: SyncIO[FunFixture[PgLoBinaryStore[IO]]] =
-    ResourceFixture(
+  override lazy val binStore: Fixture[PgLoBinaryStore[IO]] =
+    ResourceSuiteLocalFixture(
+      "pglo-store",
       Resource
         .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
         .map(cnt => makeBinStore(cnt, logger, PgLoConfig.default))
@@ -28,4 +27,5 @@ class PgLoBinaryStoreTest
 
   assume(Docker.existsUnsafe, "docker not present")
 
+  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
 }
