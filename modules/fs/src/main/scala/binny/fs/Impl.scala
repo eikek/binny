@@ -62,12 +62,13 @@ private[fs] object Impl {
     Files[F].deleteIfExists(targetFile)
 
   def writeAttrs[F[_]: Async](file: Path, attrs: BinaryAttributes): F[Unit] =
-    Stream
-      .emit(BinaryAttributes.asString(attrs))
-      .through(fs2.text.utf8.encode)
-      .through(Files[F].writeAll(file))
-      .compile
-      .drain
+    (Stream
+      .eval(file.parent.map(Files[F].createDirectories).getOrElse(().pure[F]))
+      .drain ++
+      Stream
+        .emit(BinaryAttributes.asString(attrs))
+        .through(fs2.text.utf8.encode)
+        .through(Files[F].writeAll(file))).compile.drain
 
   def loadAttrs[F[_]: Async](file: Path): OptionT[F, BinaryAttributes] =
     OptionT(Files[F].exists(file).flatMap {

@@ -4,7 +4,7 @@ import binny.spec.{BinaryAttributeStore2Spec, BinaryStore2Spec}
 import cats.effect.IO
 import munit.CatsEffectSuite
 
-class FsBasicStoreTest
+class FsBinaryStoreTest
     extends CatsEffectSuite
     with BinaryStore2Spec[FsBinaryStore[IO]]
     with BinaryAttributeStore2Spec[FsAttributeStore[IO]]

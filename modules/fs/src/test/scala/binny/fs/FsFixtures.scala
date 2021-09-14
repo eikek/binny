@@ -20,7 +20,7 @@ trait FsFixtures { self: CatsEffectSuite =>
     "fs-attr-store",
     for {
       dir <- Files[IO].tempDirectory(Some(Path("target")), "binny-fs-attr-", None)
-      store = FsAttributeStore[IO](id => dir / id.id)
+      store = FsAttributeStore[IO](FsAttrConfig.default(dir))
     } yield store
   )
 

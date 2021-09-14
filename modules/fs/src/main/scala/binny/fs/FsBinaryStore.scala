@@ -1,7 +1,6 @@
 package binny.fs
 
 import binny._
-import binny.fs.FsStoreConfig.PathMapping
 import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
@@ -24,7 +23,7 @@ final class FsBinaryStore[F[_]: Async](
   def insertWith(id: BinaryId, hint: ContentTypeDetect.Hint): Pipe[F, Byte, Nothing] =
     bytes =>
       {
-        val target = config.getTarget(id)
+        val target = config.targetFile(id)
 
         // tried with .observe to consume the stream once, but it took 5x longer
         val attr = Files[F]
@@ -49,12 +48,12 @@ final class FsBinaryStore[F[_]: Async](
       }.drain
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
-    val target = config.getTarget(id)
+    val target = config.targetFile(id)
     Impl.load[F](target, range, config.chunkSize)
   }
 
   def delete(id: BinaryId): F[Unit] = {
-    val target = config.getTarget(id)
+    val target = config.targetFile(id)
     attrStore.deleteAttr(id) *> Impl.delete[F](target).map(_ => ())
   }
 
@@ -64,16 +63,15 @@ final class FsBinaryStore[F[_]: Async](
 
 object FsBinaryStore {
 
-  def apply[F[_]: Async](logger: Logger[F], cfg: FsStoreConfig): FsBinaryStore[F] = {
-    val attrStore = cfg.mapping match {
-      case PathMapping.Basic =>
-        BinaryAttributeStore.empty[F]
-      case m: PathMapping.Subdir.type =>
-        FsAttributeStore(id => m.attrFile(cfg.baseDir, id))
-    }
-    new FsBinaryStore[F](cfg, logger, attrStore)
+  def apply[F[_]: Async](
+      logger: Logger[F],
+      storeCfg: FsStoreConfig,
+      attrCfg: FsAttrConfig
+  ): FsBinaryStore[F] = {
+    val attrStore = FsAttributeStore(attrCfg)
+    new FsBinaryStore[F](storeCfg, logger, attrStore)
   }
 
   def default[F[_]: Async](logger: Logger[F], baseDir: Path): FsBinaryStore[F] =
-    apply(logger, FsStoreConfig.default(baseDir))
+    apply(logger, FsStoreConfig.default(baseDir), FsAttrConfig.default(baseDir))
 }
