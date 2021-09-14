@@ -6,8 +6,10 @@ import cats.effect._
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
-class PostgresBinaryStoreTest extends BinaryStoreSpec[JdbcBinaryStore[IO]] with DbFixtures {
-  private [this] val logger = Log4sLogger[IO](org.log4s.getLogger)
+class PostgresBinaryStoreTest
+    extends BinaryStoreSpec[JdbcBinaryStore[IO]]
+    with DbFixtures {
+  private[this] val logger = Log4sLogger[IO](org.log4s.getLogger)
 
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))

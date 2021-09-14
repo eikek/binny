@@ -1,6 +1,7 @@
 package binny.jdbc
 
 import javax.sql.DataSource
+
 import binny.util.Logger
 import cats.effect._
 import org.h2.jdbcx.JdbcDataSource

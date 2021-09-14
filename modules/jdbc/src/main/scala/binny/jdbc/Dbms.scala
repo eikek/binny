@@ -16,10 +16,10 @@ object Dbms {
   def fromString(str: String): Either[String, Dbms] =
     str.toLowerCase match {
       case "postgresql" => Right(PostgreSQL)
-      case "postgres" => Right(PostgreSQL)
-      case "h2" => Right(H2)
-      case "mariadb" => Right(MariaDB)
-      case _ => Left(s"Unknown dbms: $str")
+      case "postgres"   => Right(PostgreSQL)
+      case "h2"         => Right(H2)
+      case "mariadb"    => Right(MariaDB)
+      case _            => Left(s"Unknown dbms: $str")
     }
 
   def unsafeFromString(str: String): Dbms =

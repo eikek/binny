@@ -6,8 +6,10 @@ import cats.effect._
 import com.dimafeng.testcontainers.MariaDBContainer
 import org.testcontainers.utility.DockerImageName
 
-class MariaDbBinaryStoreTest extends BinaryStoreSpec[JdbcBinaryStore[IO]] with DbFixtures {
-  private [this] val logger = Log4sLogger[IO](org.log4s.getLogger)
+class MariaDbBinaryStoreTest
+    extends BinaryStoreSpec[JdbcBinaryStore[IO]]
+    with DbFixtures {
+  private[this] val logger = Log4sLogger[IO](org.log4s.getLogger)
 
   val containerDef: MariaDBContainer.Def =
     MariaDBContainer.Def(DockerImageName.parse("mariadb:10.5"))
