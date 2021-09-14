@@ -13,7 +13,7 @@ final class MinioBinaryStore[F[_]: Async](
     client: MinioClient,
     attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
-) extends BinaryStore2[F] {
+) extends BinaryStore[F] {
 
   private[this] val minio = new Minio[F](client)
 

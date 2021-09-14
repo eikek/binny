@@ -6,7 +6,7 @@ import cats.effect.Sync
 import cats.implicits._
 import fs2.{Pipe, Stream}
 
-trait BinaryStore2[F[_]] extends ReadonlyAttributeStore[F] {
+trait BinaryStore[F[_]] extends ReadonlyAttributeStore[F] {
 
   /** Insert the given bytes creating a new id. */
   def insert(hint: Hint): Pipe[F, Byte, BinaryId]
@@ -23,9 +23,9 @@ trait BinaryStore2[F[_]] extends ReadonlyAttributeStore[F] {
   def delete(id: BinaryId): F[Unit]
 }
 
-object BinaryStore2 {
-  def none[F[_]: Sync]: BinaryStore2[F] =
-    new BinaryStore2[F] {
+object BinaryStore {
+  def none[F[_]: Sync]: BinaryStore[F] =
+    new BinaryStore[F] {
       def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] =
         OptionT.none
 

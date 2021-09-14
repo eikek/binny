@@ -14,7 +14,7 @@ final class FsBinaryStore[F[_]: Async](
     val config: FsStoreConfig,
     logger: Logger[F],
     attrStore: BinaryAttributeStore[F]
-) extends BinaryStore2[F] {
+) extends BinaryStore[F] {
   def insert(hint: ContentTypeDetect.Hint): Pipe[F, Byte, BinaryId] =
     in =>
       Stream
