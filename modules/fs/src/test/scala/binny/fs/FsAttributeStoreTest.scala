@@ -1,8 +1,8 @@
 package binny.fs
 
-import binny.BasicAttributeStoreSuite
+import binny.spec.BinaryAttributeStoreSpec
 import cats.effect.IO
 
 class FsAttributeStoreTest
-    extends BasicAttributeStoreSuite[FsAttributeStore[IO]]
+    extends BinaryAttributeStoreSpec[FsAttributeStore[IO]]
     with FsFixtures {}

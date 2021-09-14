@@ -5,7 +5,7 @@ import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
-import fs2.Stream
+import fs2.{Pipe, Stream}
 import io.minio.MinioClient
 
 final class MinioBinaryStore[F[_]: Async](
@@ -13,46 +13,51 @@ final class MinioBinaryStore[F[_]: Async](
     client: MinioClient,
     attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
-) extends BinaryStore[F] {
+) extends BinaryStore2[F] {
 
-  private val minio = new Minio[F](client)
+  private[this] val minio = new Minio[F](client)
 
-  def insertWith(data: BinaryData[F], hint: ContentTypeDetect.Hint): F[Unit] = {
-    val key = config.keyMapping(data.id)
-    val inStream = data.bytes.through(fs2.io.toInputStream)
-    val upload =
-      for {
-        _ <- Stream.eval(minio.makeBucketIfMissing(key.bucket))
-        _ <- minio.uploadObject(key, config.partSize, inStream)
-      } yield ()
+  def insert(hint: ContentTypeDetect.Hint): Pipe[F, Byte, BinaryId] =
+    in =>
+      Stream
+        .eval(BinaryId.random)
+        .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
 
-    for {
-      _ <- Stopwatch.wrap(d => logger.trace(s"Upload took: $d")) {
-        upload.compile.drain
-      }
-      _ <- Stopwatch.wrap(d =>
-        logger.trace(s"Computing and storing attributes took: $d")
-      ) {
-        attrStore.saveAttr(
-          data.id,
-          minio.computeAttr(key, config.detect, hint, config.chunkSize)
-        )
-      }
-    } yield ()
-  }
+  def insertWith(id: BinaryId, hint: ContentTypeDetect.Hint): Pipe[F, Byte, Nothing] =
+    bytes =>
+      Stream.eval {
+        val key = config.keyMapping(id)
+        val inStream = bytes.through(fs2.io.toInputStream)
+        val upload =
+          for {
+            _ <- Stream.eval(minio.makeBucketIfMissing(key.bucket))
+            _ <- minio.uploadObject(key, config.partSize, inStream)
+          } yield ()
 
-  def delete(id: BinaryId): F[Boolean] = {
+        for {
+          _ <- Stopwatch.wrap(d => logger.trace(s"Upload took: $d")) {
+            upload.compile.drain
+          }
+          _ <- Stopwatch.wrap(d =>
+            logger.trace(s"Computing and storing attributes took: $d")
+          ) {
+            attrStore.saveAttr(
+              id,
+              minio.computeAttr(key, config.detect, hint, config.chunkSize)
+            )
+          }
+        } yield ()
+      }.drain
+
+  def delete(id: BinaryId): F[Unit] = {
     val key = config.keyMapping(id)
-    for {
-      exists <- minio.statObject(key)
-      _ <- if (exists) minio.deleteObject(key) else ().pure[F]
-    } yield exists
+    minio.deleteObject(key)
   }
 
-  def findBinary(id: BinaryId, range: ByteRange): OptionT[F, BinaryData[F]] = {
+  def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val key = config.keyMapping(id)
     OptionT(minio.statObject(key).map {
-      case true  => Some(BinaryData(id, dataStream(key, range)))
+      case true  => Some(dataStream(key, range))
       case false => None
     })
   }
@@ -62,7 +67,7 @@ final class MinioBinaryStore[F[_]: Async](
 
   private def dataStream(key: S3Key, range: ByteRange): Stream[F, Byte] = {
     val fin = minio.getObject(key, range)
-    fs2.io.readInputStream(fin, config.chunkSize, true)
+    fs2.io.readInputStream(fin, config.chunkSize, closeAfterUse = true)
   }
 }
 

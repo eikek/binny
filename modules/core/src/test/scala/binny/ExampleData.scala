@@ -1,22 +1,25 @@
 package binny
 
 import binny.ContentTypeDetect.Hint
-import cats.effect.IO
-import fs2.{Chunk, Stream}
+import cats.effect._
+import Binary.Implicits._
+import scodec.bits.ByteVector
 
 object ExampleData {
 
-  def empty[F[_]]: Stream[F, Byte] = Stream.empty.covary[F]
+  def helloWorld[F[_]]: Binary[F] =
+    Binary.utf8String("Hello World!")
 
-  def helloWorld[F[_]]: Stream[F, Byte] =
-    Stream.chunk(Chunk.array("Hello World!".getBytes))
+  def file2M: Binary[IO] =
+    fs2.io.readInputStream(
+      IO(getClass.getResource("/file_2M.txt").openStream()),
+      64 * 1024
+    )
 
-  def emptyData[F[_]]: BinaryData[F] =
-    BinaryData(BinaryId("empty"), empty)
-
-  def helloWorldData[F[_]]: BinaryData[F] =
-    BinaryData(BinaryId("hello-world"), helloWorld)
+  val file2MAttr: BinaryAttributes =
+    BinaryAttributes(ByteVector.fromValidHex("f69322b62de9c0196cf858a8c023a0cb21171fcfc34bb757137bfbf9953a4b2e"),
+      SimpleContentType.octetStream,1978876L)
 
   def helloWorldAttr: IO[BinaryAttributes] =
-    helloWorldData[IO].computeAttributes(ContentTypeDetect.none, Hint.none)
+    helloWorld[IO].computeAttributes(ContentTypeDetect.none, Hint.none).compile.lastOrError
 }

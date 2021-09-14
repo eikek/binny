@@ -1,6 +1,6 @@
 package binny.fs
 
-import binny.BasicStoreSuite
+import binny.spec.BinaryStoreSpec
 import cats.effect.IO
 
-class FsBasicStoreTest extends BasicStoreSuite[FsBinaryStore[IO]] with FsFixtures {}
+class FsBasicStoreTest extends BinaryStoreSpec[FsBinaryStore[IO]] with FsFixtures {}

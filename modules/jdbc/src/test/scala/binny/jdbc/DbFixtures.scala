@@ -25,7 +25,7 @@ trait DbFixtures { self: CatsEffectSuite =>
       implicit val log = logger
       val ds = ConnectionConfig.h2Memory(test.name.replaceAll("\\s+", "_")).dataSource
       val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
-      val store = JdbcBinaryStore[IO](ds, logger, config, attrStore)
+      val store = GenericJdbcStore[IO](ds, logger, config, attrStore)
       DatabaseSetup
         .runBoth[IO](Dbms.PostgreSQL, ds, config.dataTable, JdbcAttrConfig.default.table)
         .unsafeRunSync()
@@ -56,7 +56,7 @@ trait DbFixtures { self: CatsEffectSuite =>
   ): JdbcBinaryStore[IO] = {
     implicit val log = logger
     val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val store = JdbcBinaryStore[IO](cc.dataSource, logger, cfg, JdbcAttrConfig.default)
+    val store = GenericJdbcStore[IO](cc.dataSource, logger, cfg, JdbcAttrConfig.default)
     if (setupRun.compareAndSet(false, true)) {
       DatabaseSetup
         .runBoth[IO](
@@ -69,5 +69,4 @@ trait DbFixtures { self: CatsEffectSuite =>
     }
     store
   }
-
 }

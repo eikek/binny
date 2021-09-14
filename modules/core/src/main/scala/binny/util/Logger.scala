@@ -1,11 +1,12 @@
 package binny.util
 
 import cats.Applicative
+import fs2.Stream
 
 /** To not force anyone to a specific logging api, this facade is used in this lib for
   * logging.
   */
-trait Logger[F[_]] {
+trait Logger[F[_]] { self =>
 
   def trace(msg: => String): F[Unit]
 
@@ -18,6 +19,26 @@ trait Logger[F[_]] {
   def error(msg: => String): F[Unit]
 
   def error(ex: Throwable)(msg: => String): F[Unit]
+
+  final def s: Logger[Stream[F, *]] = new Logger[Stream[F, *]] {
+    def trace(msg: => String): Stream[F, Unit] =
+      Stream.eval(self.trace(msg))
+
+    def debug(msg: => String): Stream[F, Unit] =
+      Stream.eval(self.debug(msg))
+
+    def info(msg: => String): Stream[F, Unit] =
+      Stream.eval(self.info(msg))
+
+    def warn(msg: => String): Stream[F, Unit] =
+      Stream.eval(self.warn(msg))
+
+    def error(msg: => String): Stream[F, Unit] =
+      Stream.eval(self.error(msg))
+
+    def error(ex: Throwable)(msg: => String): Stream[F, Unit] =
+      Stream.eval(self.error(ex)(msg))
+  }
 }
 
 object Logger {

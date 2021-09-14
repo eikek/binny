@@ -40,22 +40,18 @@ private[fs] object Impl {
       }
 
   def load[F[_]: Async](
-      id: BinaryId,
       targetFile: Path,
       range: ByteRange,
       chunkSize: Int
-  ): OptionT[F, BinaryData[F]] =
+  ): OptionT[F, Binary[F]] =
     OptionT(Files[F].exists(targetFile).map {
       case true =>
         range match {
           case ByteRange.All =>
-            BinaryData(id, Files[F].readAll(targetFile, chunkSize, Flags.Read)).some
+             Files[F].readAll(targetFile, chunkSize, Flags.Read).some
 
           case ByteRange.Chunk(start, len) =>
-            BinaryData(
-              id,
-              Files[F].readRange(targetFile, chunkSize, start, start + len)
-            ).some
+              Files[F].readRange(targetFile, chunkSize, start, start + len).some
         }
 
       case false =>

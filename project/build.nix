@@ -8,7 +8,7 @@ in
 buildFHSUserEnv {
   name = "binny-sbt";
   targetPkgs = pkgs: with pkgs; [
-    netcat jdk8 wget which zsh dpkg sbt git ncurses mc jekyll
+    netcat jdk8 wget which sbt jekyll
   ];
   runScript = initScript;
 }

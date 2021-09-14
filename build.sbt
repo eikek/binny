@@ -3,7 +3,6 @@ import com.typesafe.sbt.SbtGit.GitKeys._
 val scala212 = "2.12.14"
 val scala213 = "2.13.6"
 val scala3 = "3.0.1"
-val updateReadme = inputKey[Unit]("Update readme")
 
 addCommandAlias("ci", "; lint; +test; readme/updateReadme ;microsite/mdoc; +publishLocal")
 addCommandAlias(
@@ -75,7 +74,11 @@ lazy val noPublish = Seq(
 
 val testSettings = Seq(
   libraryDependencies ++=
-    (Dependencies.munit ++ Dependencies.munitCatsEffect ++ Dependencies.logback ++ Dependencies.loggingApi)
+    (Dependencies.munit ++
+      Dependencies.munitCatsEffect ++
+      Dependencies.logback ++
+      Dependencies.loggingApi ++
+      Dependencies.fs2io)
       .map(_ % Test),
   Test / parallelExecution := false,
   Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "-b")
@@ -114,7 +117,8 @@ lazy val core = project
     name := "binny-core",
     description := "The binny api",
     libraryDependencies ++=
-      Dependencies.fs2
+      Dependencies.fs2,
+    addCompilerPlugin(Dependencies.kindProjectorPlugin)
   )
 
 lazy val fs = project
@@ -170,22 +174,10 @@ lazy val minio = project
     description := "Implementation using the S3 API using MinIO SDK",
     libraryDependencies ++=
       Dependencies.minio ++
-        Dependencies.fs2io
+        Dependencies.fs2io ++
+        Dependencies.testContainers.map(_ % Test)
   )
   .dependsOn(core % "compile->compile;test->test")
-
-lazy val s3 = project
-  .in(file("modules/s3"))
-  .settings(sharedSettings)
-  .settings(testSettings)
-  .settings(scalafixSettings)
-  .settings(
-    name := "binny-s3",
-    description := "Implementation using the S3 API using fs2-aws",
-    libraryDependencies ++=
-      Dependencies.fs2Aws
-  )
-  .dependsOn(core % "compile->compile;test->test", minio % "test->test")
 
 lazy val tikaDetect = project
   .in(file("modules/tika-detect"))
@@ -211,11 +203,11 @@ lazy val microsite = project
     publish / skip := true,
     micrositeFooterText := Some(
       s"""
-         |<p>&copy; 2020- <a href="https://github.com/eikek/binny">Binny v${latestRelease.value}</a></p>
+         |<p>&copy; 2021- <a href="https://github.com/eikek/binny">Binny v${latestRelease.value}</a></p>
          |""".stripMargin
     ),
     micrositeName := "Binny",
-    micrositeDescription := "Binny – Deal with files",
+    micrositeDescription := "Binny – Scala library for files in databases",
     micrositeFavicons := Seq(microsites.MicrositeFavicon("favicon.png", "35x35")),
     micrositeBaseUrl := "/binny",
     micrositeAuthor := "eikek",
@@ -229,32 +221,7 @@ lazy val microsite = project
       "VERSION" -> latestRelease.value
     )
   )
-  .dependsOn(core % "compile->compile,test", fs, jdbc, pglo, minio, s3, tikaDetect)
-
-lazy val readme = project
-  .in(file("modules/readme"))
-  .enablePlugins(MdocPlugin)
-  .settings(sharedSettings)
-  .settings(noPublish)
-  .settings(
-    name := "binny-readme",
-    scalacOptions := Seq(),
-    mdocVariables := Map(
-      "VERSION" -> latestRelease.value
-    ),
-    updateReadme := {
-      mdoc.evaluated
-      val out = mdocOut.value / "readme.md"
-      val target = (LocalRootProject / baseDirectory).value / "README.md"
-      val logger = streams.value.log
-      logger.info(s"Updating readme: $out -> $target")
-      IO.copyFile(out, target)
-      ()
-    }
-  )
-  .dependsOn(
-    core % "compile->compile;compile->test"
-  )
+  .dependsOn(core % "compile->compile,test", fs, jdbc, pglo, minio, tikaDetect)
 
 val root = project
   .in(file("."))
@@ -264,4 +231,4 @@ val root = project
     name := "binny-root",
     crossScalaVersions := Nil
   )
-  .aggregate(core, fs, jdbc, pglo, minio, s3, tikaDetect)
+  .aggregate(core, fs, jdbc, pglo, minio, tikaDetect)
