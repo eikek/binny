@@ -1,6 +1,6 @@
 package binny.spec
 
-import binny.{BinaryAttributeStore, BinaryId, ExampleData, SimpleContentType}
+import binny._
 import cats.effect.{IO, SyncIO}
 import munit.CatsEffectSuite
 

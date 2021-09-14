@@ -13,11 +13,11 @@ import fs2.Pipe
 import fs2.Stream
 
 final class GenericJdbcStore[F[_]: Sync](
-                                      ds: DataSource,
-                                      logger: Logger[F],
-                                      val config: JdbcStoreConfig,
-                                      attrStore: BinaryAttributeStore[F]
-                                    ) extends JdbcBinaryStore[F] {
+    ds: DataSource,
+    logger: Logger[F],
+    val config: JdbcStoreConfig,
+    attrStore: BinaryAttributeStore[F]
+) extends JdbcBinaryStore[F] {
 
   implicit private val log: Logger[F] = logger
   private[this] val dataApi = new DbRunApi[F](config.dataTable, logger)
@@ -65,10 +65,10 @@ final class GenericJdbcStore[F[_]: Sync](
       }.drain
 
   /** Finds a binary by its id. The data stream loads the bytes chunk-wise from the
-   * database, where on each chunk the connection to the database is closed. This is
-   * safer when the stream is running for some time to avoid the server closing the
-   * connection due to timeouts.
-   */
+    * database, where on each chunk the connection to the database is closed. This is
+    * safer when the stream is running for some time to avoid the server closing the
+    * connection due to timeouts.
+    */
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] =
     dataApi
       .exists(id)
@@ -124,25 +124,24 @@ final class GenericJdbcStore[F[_]: Sync](
     attrStore.findAttr(id)
 }
 
-object GenericJdbcStore{
+object GenericJdbcStore {
   def apply[F[_]: Sync](
-                         ds: DataSource,
-                         logger: Logger[F],
-                         config: JdbcStoreConfig,
-                         attrStore: BinaryAttributeStore[F]
-                       ): JdbcBinaryStore[F] =
+      ds: DataSource,
+      logger: Logger[F],
+      config: JdbcStoreConfig,
+      attrStore: BinaryAttributeStore[F]
+  ): JdbcBinaryStore[F] =
     new GenericJdbcStore[F](ds, logger, config, attrStore)
 
   def apply[F[_]: Sync](
-                         ds: DataSource,
-                         logger: Logger[F],
-                         config: JdbcStoreConfig,
-                         attrCfg: JdbcAttrConfig
-                       ): JdbcBinaryStore[F] =
+      ds: DataSource,
+      logger: Logger[F],
+      config: JdbcStoreConfig,
+      attrCfg: JdbcAttrConfig
+  ): JdbcBinaryStore[F] =
     new GenericJdbcStore[F](ds, logger, config, JdbcAttributeStore(attrCfg, ds, logger))
 
   def default[F[_]: Sync](ds: DataSource, logger: Logger[F]): JdbcBinaryStore[F] =
     apply(ds, logger, JdbcStoreConfig.default, JdbcAttrConfig.default)
-
 
 }

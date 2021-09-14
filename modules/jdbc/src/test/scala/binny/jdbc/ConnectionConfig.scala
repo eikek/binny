@@ -1,7 +1,6 @@
 package binny.jdbc
 
 import javax.sql.DataSource
-
 import binny.util.Logger
 import cats.effect._
 import org.h2.jdbcx.JdbcDataSource
@@ -14,49 +13,46 @@ final case class ConnectionConfig(
     password: String
 ) {
 
-  val dbms: String =
-    url.dropWhile(_ != ':').drop(1).takeWhile(_ != ':')
+  val dbms: Dbms =
+    Dbms.unsafeFromJdbcUrl(url)
 
   def dataSource: DataSource =
     dbms match {
-      case "h2" =>
-        val ds = new JdbcDataSource()
-        ds.setUser(user)
-        ds.setPassword(password)
-        ds.setURL(url)
-        ds
-
-      case "mariadb" =>
-        val ds = new MariaDbDataSource()
-        ds.setUser(user)
-        ds.setPassword(password)
-        ds.setUrl(url)
-        ds
-
-      case "postgresql" =>
+      case Dbms.PostgreSQL =>
         val ds = new PGSimpleDataSource()
         ds.setUser(user)
         ds.setPassword(password)
         ds.setURL(url)
         ds
 
-      case _ =>
-        sys.error(s"Unknown jdbc url: $url")
+      case Dbms.H2 =>
+        val ds = new JdbcDataSource()
+        ds.setUser(user)
+        ds.setPassword(password)
+        ds.setURL(url)
+        ds
+
+      case Dbms.MariaDB =>
+        val ds = new MariaDbDataSource()
+        ds.setUser(user)
+        ds.setPassword(password)
+        ds.setUrl(url)
+        ds
     }
 
   def setup[F[_]: Sync](dataTable: String, attrTable: String)(implicit
       log: Logger[F]
   ): F[Int] =
     dbms match {
-      case "h2" =>
+      case Dbms.PostgreSQL =>
         DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
-      case "mariadb" =>
-        DatabaseSetup.runBoth(Dbms.MariaDB, dataSource, dataTable, attrTable)
-      case "postgresql" =>
-        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
-      case _ => sys.error(s"Unknown jdbc url: $url")
-    }
 
+      case Dbms.H2 =>
+        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
+
+      case Dbms.MariaDB =>
+        DatabaseSetup.runBoth(Dbms.MariaDB, dataSource, dataTable, attrTable)
+    }
 }
 
 object ConnectionConfig {

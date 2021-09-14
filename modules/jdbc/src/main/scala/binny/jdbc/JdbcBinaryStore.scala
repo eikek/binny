@@ -12,4 +12,3 @@ trait JdbcBinaryStore[F[_]] extends BinaryStore2[F] {
   def findBinaryStateful(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]]
 
 }
-

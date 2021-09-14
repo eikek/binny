@@ -20,7 +20,7 @@ private[fs] object Impl {
           overwriteMode match {
             case OverwriteMode.Fail =>
               Stream
-                .raiseError[F](new Exception(s"The file already exists: ${targetFile}"))
+                .raiseError[F](new Exception(s"The file already exists: $targetFile"))
 
             case OverwriteMode.Skip =>
               Stream.empty.covary[F]
@@ -48,10 +48,10 @@ private[fs] object Impl {
       case true =>
         range match {
           case ByteRange.All =>
-             Files[F].readAll(targetFile, chunkSize, Flags.Read).some
+            Files[F].readAll(targetFile, chunkSize, Flags.Read).some
 
           case ByteRange.Chunk(start, len) =>
-              Files[F].readRange(targetFile, chunkSize, start, start + len).some
+            Files[F].readRange(targetFile, chunkSize, start, start + len).some
         }
 
       case false =>

@@ -15,18 +15,14 @@ class MinioBinaryStoreTest
         .map(cnt =>
           Config.store(
             S3KeyMapping.constant("testing"),
-            cnt.underlyingUnsafeContainer.getContainerIpAddress
+            cnt.underlyingUnsafeContainer.getContainerIpAddress,
+            cnt.underlyingUnsafeContainer.getMappedPort(9000)
           )
         )
     )
 
-  override val containerDef: MinioContainer.Def.type = MinioContainer.Def
-
-//  override def munitIgnore =
-//    !MinioBinaryStoreTest.minioPresent
+  override val containerDef: MinioContainer.Def = new MinioContainer.Def
 
 }
 
-object MinioBinaryStoreTest {
-
-}
+object MinioBinaryStoreTest {}

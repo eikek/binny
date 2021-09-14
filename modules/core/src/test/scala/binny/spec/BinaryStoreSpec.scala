@@ -1,17 +1,18 @@
 package binny.spec
 
+import java.security.MessageDigest
+
 import binny.Binary.Implicits._
 import binny.ContentTypeDetect.Hint
-import binny.{Binary, BinaryStore2, ByteRange, ContentTypeDetect, ExampleData}
+import binny._
+import binny.util.Stopwatch
 import cats.effect.{IO, SyncIO}
 import fs2.Stream
 import munit.CatsEffectSuite
 
-import java.security.MessageDigest
+abstract class BinaryStoreSpec[S <: BinaryStore2[IO]] extends CatsEffectSuite {
 
-abstract class BinaryStoreSpec[S <: BinaryStore2[IO]]
-    extends CatsEffectSuite {
-
+  private[this] val logger = Log4sLogger[IO](org.log4s.getLogger)
   val binStore: SyncIO[FunFixture[S]]
 
   val hint: Hint = Hint.none
@@ -39,10 +40,12 @@ abstract class BinaryStoreSpec[S <: BinaryStore2[IO]]
 
   binStore.test("insert and load large file") { store =>
     (for {
+      w <- Stream.eval(Stopwatch.start[IO])
       id <- ExampleData.file2M.through(store.insert(hint))
       bin <- Stream.eval(store.findBinary(id, ByteRange.All).getOrElse(noFileError))
       attr <- bin.computeAttributes(ContentTypeDetect.none, hint)
       _ = assertEquals(attr, ExampleData.file2MAttr)
+      _ <- Stream.eval(Stopwatch.show(w)(d => logger.debug(s"Large file test took: $d")))
     } yield ()).compile.drain
   }
 

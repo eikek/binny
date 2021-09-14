@@ -21,6 +21,9 @@ object DatabaseSetup {
       case Dbms.PostgreSQL =>
         CreateDataTable.postgresAll(dataTable, attrTable).execute(ds)
 
+      case Dbms.H2 =>
+        CreateDataTable.postgresAll(dataTable, attrTable).execute(ds)
+
       case Dbms.MariaDB =>
         CreateDataTable.mariadbAll(dataTable, attrTable).execute(ds)
     }
@@ -31,6 +34,10 @@ object DatabaseSetup {
     dbms match {
       case Dbms.PostgreSQL =>
         CreateDataTable.postgresData(table).execute(ds)
+
+      case Dbms.H2 =>
+        CreateDataTable.postgresData(table).execute(ds)
+
       case Dbms.MariaDB =>
         CreateDataTable.mariadbData(table).execute(ds)
     }
@@ -41,6 +48,10 @@ object DatabaseSetup {
     dbms match {
       case Dbms.PostgreSQL =>
         CreateDataTable.postgresAttr(table).execute(ds)
+
+      case Dbms.H2 =>
+        CreateDataTable.postgresAttr(table).execute(ds)
+
       case Dbms.MariaDB =>
         CreateDataTable.mariadbAttr(table).execute(ds)
     }

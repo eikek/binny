@@ -1,6 +1,5 @@
 package binny.jdbc
 
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
 
 import binny.util.Logger
@@ -48,25 +47,25 @@ trait DbFixtures { self: CatsEffectSuite =>
     teardown = _ => ()
   )
 
-  private val setupRun = new AtomicBoolean(false)
   def makeBinStore(
       cnt: JdbcDatabaseContainer,
       logger: Logger[IO],
       cfg: JdbcStoreConfig
   ): JdbcBinaryStore[IO] = {
     implicit val log = logger
+
     val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val store = GenericJdbcStore[IO](cc.dataSource, logger, cfg, JdbcAttrConfig.default)
-    if (setupRun.compareAndSet(false, true)) {
-      DatabaseSetup
-        .runBoth[IO](
-          Dbms.PostgreSQL,
-          cc.dataSource,
-          cfg.dataTable,
-          JdbcAttrConfig.default.table
-        )
-        .unsafeRunSync()
-    }
+    val ds = cc.dataSource
+    val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
+    val store = GenericJdbcStore[IO](cc.dataSource, logger, cfg, attrStore)
+    DatabaseSetup
+      .runBoth[IO](
+        Dbms.unsafeFromJdbcUrl(cnt.jdbcUrl),
+        cc.dataSource,
+        cfg.dataTable,
+        JdbcAttrConfig.default.table
+      )
+      .unsafeRunSync()
     store
   }
 }

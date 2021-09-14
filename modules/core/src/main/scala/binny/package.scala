@@ -1,8 +1,8 @@
+import java.security.MessageDigest
+
 import binny.ContentTypeDetect.Hint
 import fs2.{Chunk, Pipe, Stream}
 import scodec.bits.ByteVector
-
-import java.security.MessageDigest
 
 package object binny {
 

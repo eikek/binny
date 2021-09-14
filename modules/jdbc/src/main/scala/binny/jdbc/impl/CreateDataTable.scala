@@ -102,8 +102,8 @@ object CreateDataTable {
   ): DbRun[F, Int] =
     DbRun.executeUpdate(
       s"""
-         |ALTER TABLE `$dataTable` ADD CONSTRAINT `${dataTable}_file_id_fkey`
-         | FOREIGN KEY `file_id` REFERENCES `${attrTable}`(`file_id`)""".stripMargin
+         |ALTER TABLE `$dataTable` ADD CONSTRAINT FOREIGN KEY `${dataTable}_file_id_fkey`
+         |(`file_id`) REFERENCES `${attrTable}`(`file_id`)""".stripMargin
     )
 
 }

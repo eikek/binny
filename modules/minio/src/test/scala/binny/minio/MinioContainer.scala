@@ -5,14 +5,15 @@ import com.dimafeng.testcontainers.GenericContainer.DockerImage
 import org.testcontainers.containers.wait.strategy.Wait
 
 object MinioContainer {
+  private val cfg = Config.testing(S3KeyMapping.constant("testing"), "", 0)
 
-  val container: GenericContainer = GenericContainer(
+  def container: GenericContainer = GenericContainer(
     dockerImage = DockerImage(Left("quay.io/minio/minio")),
     exposedPorts = Seq(9000),
-    env = Map("MINIO_ROOT_USER" -> "root", "MINIO_ROOT_PASSWORD" -> "d2Fscm/f"),
+    env = Map("MINIO_ROOT_USER" -> cfg.accessKey, "MINIO_ROOT_PASSWORD" -> cfg.secretKey),
     command = Seq("server", "/data"),
-    waitStrategy = Wait.forListeningPort()
+    waitStrategy = Wait.defaultWaitStrategy()
   )
 
-  object Def extends GenericContainer.Def[GenericContainer](container) {}
+  class Def extends GenericContainer.Def[GenericContainer](container) {}
 }

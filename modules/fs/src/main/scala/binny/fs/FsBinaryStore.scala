@@ -4,8 +4,8 @@ import binny._
 import binny.fs.FsStoreConfig.PathMapping
 import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
-import cats.implicits._
 import cats.effect._
+import cats.implicits._
 import fs2.Pipe
 import fs2.Stream
 import fs2.io.file.{Files, Path}

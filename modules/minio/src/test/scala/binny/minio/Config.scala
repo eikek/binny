@@ -8,19 +8,19 @@ import io.minio.MinioClient
 import okhttp3.OkHttpClient
 
 object Config {
-  def testing(m: S3KeyMapping, ip: String): MinioConfig =
+  def testing(m: S3KeyMapping, ip: String, port: Int): MinioConfig =
     MinioConfig
       .default(
-        s"http://$ip:9000",
+        s"http://$ip:$port",
         "root",
         "d2Fscm/f",
         m
       )
       .copy(chunkSize = 100 * 1024)
 
-  def store(m: S3KeyMapping, ip: String): MinioBinaryStore[IO] =
+  def store(m: S3KeyMapping, ip: String, port: Int): MinioBinaryStore[IO] =
     MinioBinaryStore(
-      testing(m, ip),
+      testing(m, ip, port),
       BinaryAttributeStore.empty[IO],
       Log4sLogger(org.log4s.getLogger)
     )
