@@ -1,14 +1,14 @@
 package binny.jdbc
 
 import binny.Log4sLogger
-import binny.spec.{BinaryAttributeStore2Spec, BinaryStore2Spec}
+import binny.spec.{BinaryAttributeStoreSpec, BinaryStoreSpec}
 import cats.effect._
 import munit.CatsEffectSuite
 
 class H2BinaryStoreTest
     extends CatsEffectSuite
-    with BinaryStore2Spec[JdbcBinaryStore[IO]]
-    with BinaryAttributeStore2Spec[JdbcAttributeStore[IO]]
+    with BinaryStoreSpec[JdbcBinaryStore[IO]]
+    with BinaryAttributeStoreSpec[JdbcAttributeStore[IO]]
     with DbFixtures {
 
   lazy val binStore: Fixture[JdbcBinaryStore[IO]] =

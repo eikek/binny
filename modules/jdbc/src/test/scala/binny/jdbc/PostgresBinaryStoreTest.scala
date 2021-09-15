@@ -1,6 +1,6 @@
 package binny.jdbc
 
-import binny.spec.{BinaryAttributeStore2Spec, BinaryStore2Spec}
+import binny.spec.{BinaryAttributeStoreSpec, BinaryStoreSpec}
 import cats.effect._
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import munit.CatsEffectSuite
@@ -8,8 +8,8 @@ import org.testcontainers.utility.DockerImageName
 
 class PostgresBinaryStoreTest
     extends CatsEffectSuite
-    with BinaryStore2Spec[JdbcBinaryStore[IO]]
-    with BinaryAttributeStore2Spec[JdbcAttributeStore[IO]]
+    with BinaryStoreSpec[JdbcBinaryStore[IO]]
+    with BinaryAttributeStoreSpec[JdbcAttributeStore[IO]]
     with DbFixtures {
 
   val containerDef: PostgreSQLContainer.Def =

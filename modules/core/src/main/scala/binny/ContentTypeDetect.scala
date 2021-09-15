@@ -1,5 +1,6 @@
 package binny
 
+import java.net.URLConnection
 import java.nio.file.{Files, Paths}
 
 import scala.util.Try
@@ -39,7 +40,14 @@ object ContentTypeDetect {
     ContentTypeDetect { (_, hint) =>
       hint.filename
         .flatMap(name => Try(Paths.get(name)).toOption)
-        .flatMap(name => Option(Files.probeContentType(name)))
+        .flatMap(name =>
+          Option(Files.probeContentType(name)).orElse(
+            Option(
+              // this is not always tried by probeContentType it seems
+              URLConnection.getFileNameMap.getContentTypeFor(name.getFileName.toString)
+            )
+          )
+        )
         .map(SimpleContentType.apply)
         .getOrElse(SimpleContentType.octetStream)
     }

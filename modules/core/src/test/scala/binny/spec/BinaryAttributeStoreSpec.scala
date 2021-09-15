@@ -4,7 +4,7 @@ import binny._
 import cats.effect.IO
 import munit.CatsEffectSuite
 
-trait BinaryAttributeStore2Spec[S <: BinaryAttributeStore[IO]] { self: CatsEffectSuite =>
+trait BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]] { self: CatsEffectSuite =>
 
   val attrStore: Fixture[S]
 

@@ -3,10 +3,10 @@ package binny.pglo
 import binny.jdbc._
 import binny.util.Logger
 import cats.effect._
+import cats.effect.unsafe.implicits._
 import com.dimafeng.testcontainers.JdbcDatabaseContainer
-import munit.CatsEffectSuite
 
-trait PgStoreFixtures { self: CatsEffectSuite =>
+trait PgStoreFixtures {
 
   def makeBinStore(
       cnt: JdbcDatabaseContainer,
@@ -31,3 +31,5 @@ trait PgStoreFixtures { self: CatsEffectSuite =>
   }
 
 }
+
+object PgStoreFixtures extends PgStoreFixtures

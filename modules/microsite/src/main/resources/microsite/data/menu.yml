@@ -1,3 +1,32 @@
 options:
   - title: Home
-    url: index.html
+    url: index
+
+  - title: Core Api
+    url: core
+
+    nested_options:
+      - title: BinaryStore
+        url: core/binarystore
+
+      - title: BinaryAttributesStore
+        url: core/attrstore
+
+      - title: ContentTypeDetect
+        url: core/detect
+
+  - title: Implementation Modules
+    url: impls
+
+    nested_options:
+      - title: Filesystem
+        url: fs
+
+      - title: JDBC
+        url: jdbc
+
+      - title: PG LargeObject
+        url: pglo
+
+      - title: MinIO
+        url: minio

@@ -11,5 +11,5 @@ final case class FsAttrConfig(base: Path, mapping: PathMapping) {
 }
 
 object FsAttrConfig {
-  def default(base: Path) = FsAttrConfig(base, PathMapping.subdir("attr"))
+  def default(base: Path) = FsAttrConfig(base, PathMapping.subdir2("attr"))
 }

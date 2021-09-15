@@ -1,13 +1,13 @@
 package binny.minio
 
-import binny.spec.BinaryStore2Spec
+import binny.spec.BinaryStoreSpec
 import cats.effect._
 import com.dimafeng.testcontainers.munit.TestContainerForAll
 import munit.CatsEffectSuite
 
 class MinioBinaryStoreTest
     extends CatsEffectSuite
-    with BinaryStore2Spec[MinioBinaryStore[IO]]
+    with BinaryStoreSpec[MinioBinaryStore[IO]]
     with TestContainerForAll {
 
   lazy val binStore: Fixture[MinioBinaryStore[IO]] =

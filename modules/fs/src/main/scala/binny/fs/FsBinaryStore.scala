@@ -64,6 +64,13 @@ final class FsBinaryStore[F[_]: Async](
 object FsBinaryStore {
 
   def apply[F[_]: Async](
+      config: FsStoreConfig,
+      logger: Logger[F],
+      attrStore: BinaryAttributeStore[F]
+  ): FsBinaryStore[F] =
+    new FsBinaryStore[F](config, logger, attrStore)
+
+  def apply[F[_]: Async](
       logger: Logger[F],
       storeCfg: FsStoreConfig,
       attrCfg: FsAttrConfig

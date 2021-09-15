@@ -14,6 +14,9 @@ final case class FsStoreConfig(
 
   def targetFile(id: BinaryId): Path =
     mapping(baseDir, id)
+
+  def withMapping(pm: PathMapping): FsStoreConfig =
+    copy(mapping = pm)
 }
 
 object FsStoreConfig {
@@ -23,7 +26,7 @@ object FsStoreConfig {
       baseDir,
       ContentTypeDetect.none,
       OverwriteMode.Fail,
-      PathMapping.subdir("file"),
+      PathMapping.subdir2("file"),
       100 * 1024
     )
 

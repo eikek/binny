@@ -219,9 +219,18 @@ lazy val microsite = project
     scalacOptions := Seq(),
     mdocVariables := Map(
       "VERSION" -> latestRelease.value
-    )
+    ),
+    libraryDependencies ++=
+      Dependencies.h2
   )
-  .dependsOn(core % "compile->compile,test", fs, jdbc, pglo, minio, tikaDetect)
+  .dependsOn(
+    core % "compile->compile,test",
+    fs,
+    jdbc % "compile->compile,test",
+    pglo,
+    minio,
+    tikaDetect
+  )
 
 val root = project
   .in(file("."))
