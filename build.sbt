@@ -2,7 +2,7 @@ import com.typesafe.sbt.SbtGit.GitKeys._
 
 val scala212 = "2.12.14"
 val scala213 = "2.13.6"
-val scala3 = "3.0.1"
+val scala3 = "3.0.2"
 
 addCommandAlias("ci", "; lint; +test; readme/updateReadme ;microsite/mdoc; +publishLocal")
 addCommandAlias(
@@ -106,6 +106,13 @@ val scalafixSettings = Seq(
   ThisBuild / scalafixDependencies ++= Dependencies.organizeImports
 )
 
+val kindProjectorPlugin = Seq(
+  libraryDependencies ++= {
+    if (scalaBinaryVersion.value == "3") Nil
+    else List(compilerPlugin(Dependencies.kindProjectorPlugin))
+  }
+)
+
 lazy val core = project
   .in(file("modules/core"))
   .enablePlugins(BuildInfoPlugin)
@@ -118,7 +125,7 @@ lazy val core = project
     description := "The binny api",
     libraryDependencies ++=
       Dependencies.fs2,
-    addCompilerPlugin(Dependencies.kindProjectorPlugin)
+    kindProjectorPlugin
   )
 
 lazy val fs = project
@@ -145,7 +152,7 @@ lazy val jdbc = project
     libraryDependencies ++=
       Dependencies.databases.map(_ % Test) ++
         Dependencies.testContainers.map(_ % Test),
-    addCompilerPlugin(Dependencies.kindProjectorPlugin)
+    kindProjectorPlugin
   )
   .dependsOn(core % "compile->compile;test->test")
 
@@ -159,8 +166,8 @@ lazy val pglo = project
     description := "Implementation using PostgreSQLs LargeObject API",
     libraryDependencies ++=
       Dependencies.postgres ++
-        Dependencies.testContainers.map(_ % Test),
-    addCompilerPlugin(Dependencies.kindProjectorPlugin)
+      Dependencies.testContainers.map(_ % Test),
+    kindProjectorPlugin
   )
   .dependsOn(core % "compile->compile;test->test", jdbc % "compile->compile;test->test")
 

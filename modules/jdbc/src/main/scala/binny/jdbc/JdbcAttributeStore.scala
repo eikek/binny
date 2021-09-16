@@ -17,7 +17,7 @@ final class JdbcAttributeStore[F[_]: Sync](
 ) extends BinaryAttributeStore[F] {
   private[this] val dbApi = new DbRunApi[F](config.table, logger)
 
-  implicit private val log = logger
+  implicit private val log: Logger[F] = logger
 
   def runSetup(dbms: Dbms): F[Int] =
     DatabaseSetup.runAttr[F](dbms, ds, config.table)

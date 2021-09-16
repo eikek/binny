@@ -21,7 +21,7 @@ trait DbFixtures { self: CatsEffectSuite =>
       logger: Logger[IO],
       config: JdbcStoreConfig
   ): JdbcBinaryStore[IO] = {
-    implicit val log = logger
+    implicit val log: Logger[IO] = logger
     val ds = ConnectionConfig.h2Memory(db.replaceAll("\\s+", "_")).dataSource
     val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
     val store = GenericJdbcStore[IO](ds, logger, config, attrStore)
@@ -49,7 +49,7 @@ trait DbFixtures { self: CatsEffectSuite =>
   ): JdbcAttributeStore[IO] = {
     val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
     val ds = cc.dataSource
-    implicit val log = logger
+    implicit val log: Logger[IO] = logger
     DatabaseSetup
       .runAttr[IO](Dbms.unsafeFromJdbcUrl(cnt.jdbcUrl), ds, cfg.table)
       .unsafeRunSync()
@@ -61,7 +61,7 @@ trait DbFixtures { self: CatsEffectSuite =>
       logger: Logger[IO],
       cfg: JdbcStoreConfig
   ): JdbcBinaryStore[IO] = {
-    implicit val log = logger
+    implicit val log: Logger[IO] = logger
 
     val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
     val ds = cc.dataSource

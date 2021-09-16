@@ -10,7 +10,7 @@ import munit.CatsEffectSuite
 import org.log4s.getLogger
 
 class DbRunTest extends CatsEffectSuite with DbFixtures {
-  implicit private[this] val logger = Log4sLogger[IO](getLogger)
+  implicit private[this] val logger: Logger[IO] = Log4sLogger[IO](getLogger)
 
   val config = JdbcStoreConfig.default
   val dataSource: FunFixture[DataSource] = h2MemoryDataSource

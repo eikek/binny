@@ -80,7 +80,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
     val args = range match {
       case ByteRange.All => aargs.build()
       case ByteRange.Chunk(offset, length) =>
-        aargs.offset(offset).length(length).build()
+        aargs.offset(offset).length(length.toLong).build()
     }
     Sync[F].blocking(client.getObject(args))
   }
