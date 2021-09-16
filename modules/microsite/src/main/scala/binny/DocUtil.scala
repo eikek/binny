@@ -1,6 +1,6 @@
 package binny
 
-import cats.effect.IO
+import cats.effect._
 import fs2.Stream
 import fs2.io.file.{Files, Path}
 
@@ -30,6 +30,14 @@ object DocUtil {
       case true  => spaces + "📁 " + path.fileName.toString
       case false => spaces + "· " + path.fileName.toString
     }
-
   }
+
+  def deleteDir(dir: Path): IO[Unit] =
+    Files[IO].exists(dir).flatMap { exists =>
+      if (exists) Files[IO].deleteRecursively(dir)
+      else IO(())
+    }
+
+  def tempDir: Resource[IO, Path] =
+    Files[IO].tempDirectory(None, "binny-docs-", None)
 }

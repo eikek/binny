@@ -27,23 +27,22 @@ import binny.fs._
 import fs2.io.file.{Files, Path}
 import cats.effect.IO
 import cats.effect.unsafe.implicits._
+import fs2.Stream
 
 val logger = binny.util.Logger.silent[IO]
-val baseDir = Path("./binny-fs-test")
-val store = FsBinaryStore.default(logger, baseDir)
-val someData = ExampleData.helloWorld[IO]
+val someData = ExampleData.file2M
 
 // lets store two pieces and look at the outcome
 val run =
   for {
-    _ <- fs2.Stream.eval(Files[IO].deleteRecursively(baseDir))
+    baseDir <- Stream.resource(DocUtil.tempDir)
+    store = FsBinaryStore.default(logger, baseDir)
     id1 <- someData.through(store.insert(Hint.none))
     id2 <- someData.through(store.insert(Hint.none))
-  } yield (id1, id2)
+    layout <- Stream.eval(DocUtil.directoryContentAsString(baseDir))
+  } yield (id1, id2, layout)
 
-val ids = run.compile.lastOrError.unsafeRunSync()
-
-DocUtil.directoryContentAsString(baseDir).unsafeRunSync()
+run.compile.lastOrError.unsafeRunSync()
 ```
 
 This store uses the id to create a directory using the first two
@@ -64,19 +63,20 @@ attributes and puts the files directly into the `baseDir` - using the
 id as its name.
 
 ```scala mdoc
-val store2 = FsBinaryStore[IO](
-  FsStoreConfig.default(baseDir).withMapping(PathMapping.simple),
-  logger,
-  BinaryAttributeStore.empty[IO]
-)
 
 val run2 =
-  fs2.Stream.eval(Files[IO].deleteRecursively(baseDir)) ++
-    someData.through(store2.insertWith(BinaryId("hello-world.txt"), Hint.none)) ++
-    someData.through(store2.insertWith(BinaryId("hello_world.txt"), Hint.none))
+  Stream.resource(DocUtil.tempDir).flatMap { baseDir =>
+    val store = FsBinaryStore[IO](
+      FsStoreConfig.default(baseDir).withMapping(PathMapping.simple),
+      logger,
+      BinaryAttributeStore.empty[IO]
+    )
+    someData.through(store.insertWith(BinaryId("hello-world.txt"), Hint.none)) ++
+      someData.through(store.insertWith(BinaryId("hello_world.txt"), Hint.none)) ++
+      Stream.eval(DocUtil.directoryContentAsString(baseDir))
+  }
 
-run2.compile.drain.unsafeRunSync()
-DocUtil.directoryContentAsString(baseDir).unsafeRunSync()
+run2.compile.lastOrError.unsafeRunSync()
 ```
 
 A `PathMapping` is a function `(Path, BinaryId) => Path)` where the

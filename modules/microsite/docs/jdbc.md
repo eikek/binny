@@ -55,13 +55,14 @@ val store = GenericJdbcStore.default[IO](dataSource, Logger.silent[IO])
 // creates the schema, the filenames are from the default config
 DatabaseSetup.runBoth[IO](Dbms.H2, dataSource, "file_chunk", "file_attr").unsafeRunSync()
 
-val someData = ExampleData.helloWorld[IO]
+val someData = ExampleData.file2M
 val id = someData.through(store.insert(Hint.none)).compile.lastOrError.unsafeRunSync()
 
 // get the file out
 store.findBinary(id, ByteRange.All).getOrElse(sys.error("not found"))
   .flatMap(binary => binary.readUtf8String.compile.lastOrError)
   .unsafeRunSync()
+  .take(50)
 ```
 
 The default setup also stores the attributes in the same database in a
