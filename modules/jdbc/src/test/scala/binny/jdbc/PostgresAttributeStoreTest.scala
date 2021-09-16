@@ -1,25 +1,24 @@
 package binny.jdbc
 
-import binny.BinaryStore
-import binny.spec.BinaryStoreSpec
+import binny.spec.BinaryAttributeStoreSpec
 import cats.effect._
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
-class PostgresBinaryStoreStatefulTest
-    extends BinaryStoreSpec[BinaryStore[IO]]
+class PostgresAttributeStoreTest
+    extends BinaryAttributeStoreSpec[JdbcAttributeStore[IO]]
     with DbFixtures {
 
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))
 
-  val binStore: Fixture[BinaryStore[IO]] =
+  val attrStore: Fixture[JdbcAttributeStore[IO]] =
     ResourceSuiteLocalFixture(
-      "pg-store",
+      "pg-attr-store",
       Resource
         .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
-        .map(cnt => SwapFind(makeBinStore(cnt, logger, JdbcStoreConfig.default)))
+        .map(cnt => makeAttrStore(cnt, logger, JdbcAttrConfig.default))
     )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
+  override def munitFixtures: Seq[Fixture[_]] = List(attrStore)
 }

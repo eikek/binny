@@ -9,7 +9,7 @@ import cats.effect.IO
 import fs2.Stream
 import munit.CatsEffectSuite
 
-trait BinaryStoreSpec[S <: BinaryStore[IO]] { self: CatsEffectSuite =>
+abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
 
   val logger = Log4sLogger[IO](org.log4s.getLogger)
   val binStore: Fixture[S]

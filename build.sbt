@@ -166,7 +166,7 @@ lazy val pglo = project
     description := "Implementation using PostgreSQLs LargeObject API",
     libraryDependencies ++=
       Dependencies.postgres ++
-      Dependencies.testContainers.map(_ % Test),
+        Dependencies.testContainers.map(_ % Test),
     kindProjectorPlugin
   )
   .dependsOn(core % "compile->compile;test->test", jdbc % "compile->compile;test->test")

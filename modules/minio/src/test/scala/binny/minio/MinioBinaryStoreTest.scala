@@ -4,14 +4,12 @@ import binny.BinaryAttributeStore
 import binny.spec.BinaryStoreSpec
 import cats.effect._
 import com.dimafeng.testcontainers.munit.TestContainerForAll
-import munit.CatsEffectSuite
 
 class MinioBinaryStoreTest
-    extends CatsEffectSuite
-    with BinaryStoreSpec[MinioBinaryStore[IO]]
+    extends BinaryStoreSpec[MinioBinaryStore[IO]]
     with TestContainerForAll {
 
-  lazy val binStore: Fixture[MinioBinaryStore[IO]] =
+  val binStore: Fixture[MinioBinaryStore[IO]] =
     ResourceSuiteLocalFixture(
       "minio-store",
       Resource

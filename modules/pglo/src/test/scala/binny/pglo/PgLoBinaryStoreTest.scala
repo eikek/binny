@@ -4,12 +4,10 @@ import binny.jdbc.Docker
 import binny.spec.BinaryStoreSpec
 import cats.effect._
 import com.dimafeng.testcontainers.PostgreSQLContainer
-import munit.CatsEffectSuite
 import org.testcontainers.utility.DockerImageName
 
 class PgLoBinaryStoreTest
-    extends CatsEffectSuite
-    with BinaryStoreSpec[PgLoBinaryStore[IO]]
+    extends BinaryStoreSpec[PgLoBinaryStore[IO]]
     with PgStoreFixtures {
 
   val config = PgLoConfig.default.copy(chunkSize = 210 * 1024)
@@ -17,7 +15,7 @@ class PgLoBinaryStoreTest
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))
 
-  override lazy val binStore: Fixture[PgLoBinaryStore[IO]] =
+  val binStore: Fixture[PgLoBinaryStore[IO]] =
     ResourceSuiteLocalFixture(
       "pglo-store",
       Resource

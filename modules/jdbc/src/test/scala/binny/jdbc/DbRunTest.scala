@@ -5,6 +5,7 @@ import javax.sql.DataSource
 import binny.Log4sLogger
 import binny.jdbc.impl.DbRun
 import binny.jdbc.impl.Implicits._
+import binny.util.Logger
 import cats.effect._
 import munit.CatsEffectSuite
 import org.log4s.getLogger

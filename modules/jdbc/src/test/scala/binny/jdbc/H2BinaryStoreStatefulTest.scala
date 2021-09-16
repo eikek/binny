@@ -3,14 +3,10 @@ package binny.jdbc
 import binny.spec.BinaryStoreSpec
 import binny.{BinaryStore, Log4sLogger}
 import cats.effect._
-import munit.CatsEffectSuite
 
-class H2BinaryStoreStatefulTest
-    extends CatsEffectSuite
-    with BinaryStoreSpec[BinaryStore[IO]]
-    with DbFixtures {
+class H2BinaryStoreStatefulTest extends BinaryStoreSpec[BinaryStore[IO]] with DbFixtures {
 
-  lazy val binStore: Fixture[BinaryStore[IO]] =
+  val binStore: Fixture[BinaryStore[IO]] =
     ResourceSuiteLocalFixture(
       "h2-store",
       Resource.pure(

@@ -4,9 +4,12 @@ import binny._
 import cats.effect.IO
 import munit.CatsEffectSuite
 
-trait BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]] { self: CatsEffectSuite =>
+abstract class BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]]
+    extends CatsEffectSuite {
 
-  val attrStore: Fixture[S]
+  val logger = Log4sLogger[IO](org.log4s.getLogger)
+
+  def attrStore: Fixture[S]
 
   test("attributes: save and find") {
     val store = attrStore()
