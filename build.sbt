@@ -4,7 +4,7 @@ val scala212 = "2.12.14"
 val scala213 = "2.13.6"
 val scala3 = "3.0.2"
 
-addCommandAlias("ci", "; lint; +test; readme/updateReadme ;microsite/mdoc; +publishLocal")
+addCommandAlias("ci", "lint; +test; microsite/mdoc; +publishLocal")
 addCommandAlias(
   "lint",
   "; scalafmtSbtCheck; scalafmtCheckAll; Compile/scalafix --check; Test/scalafix --check"
