@@ -3,7 +3,6 @@ package binny.minio
 import java.io.InputStream
 import java.security.MessageDigest
 
-import binny.ContentTypeDetect.Hint
 import binny._
 import cats.effect._
 import cats.implicits._

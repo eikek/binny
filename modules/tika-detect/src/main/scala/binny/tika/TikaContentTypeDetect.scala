@@ -1,7 +1,6 @@
 package binny.tika
 
-import binny.ContentTypeDetect.Hint
-import binny.{ContentTypeDetect, SimpleContentType}
+import binny._
 import org.apache.tika.config.TikaConfig
 import org.apache.tika.detect.Detector
 import org.apache.tika.metadata.{HttpHeaders, Metadata, TikaCoreProperties}

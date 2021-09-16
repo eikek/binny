@@ -1,7 +1,7 @@
 package binny
 
 import binny.Binary.Implicits._
-import binny.ContentTypeDetect.Hint
+import binny.Hint
 import cats.effect._
 import scodec.bits.ByteVector
 

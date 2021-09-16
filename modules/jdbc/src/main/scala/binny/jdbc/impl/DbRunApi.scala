@@ -6,7 +6,6 @@ import java.sql.ResultSet
 
 import scala.util.Using
 
-import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.Implicits._
 import binny.util.{Logger, RangeCalc}

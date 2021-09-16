@@ -1,5 +1,6 @@
 package binny.minio
 
+import binny.BinaryAttributeStore
 import binny.spec.BinaryStoreSpec
 import cats.effect._
 import com.dimafeng.testcontainers.munit.TestContainerForAll
@@ -16,10 +17,10 @@ class MinioBinaryStoreTest
       Resource
         .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
         .map(cnt =>
-          Config.store(
-            S3KeyMapping.constant("testing"),
-            cnt.underlyingUnsafeContainer.getContainerIpAddress,
-            cnt.underlyingUnsafeContainer.getMappedPort(9000)
+          MinioBinaryStore(
+            cnt.createConfig(S3KeyMapping.constant("testing")),
+            BinaryAttributeStore.empty[IO],
+            logger
           )
         )
     )

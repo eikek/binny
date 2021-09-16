@@ -1,7 +1,6 @@
 package binny.tika
 
-import binny.ContentTypeDetect.Hint
-import binny.SimpleContentType
+import binny._
 import munit.CatsEffectSuite
 import scodec.bits.ByteVector
 

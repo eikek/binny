@@ -22,13 +22,13 @@ final class GenericJdbcStore[F[_]: Sync](
   implicit private val log: Logger[F] = logger
   private[this] val dataApi = new DbRunApi[F](config.dataTable, logger)
 
-  def insert(hint: ContentTypeDetect.Hint): Pipe[F, Byte, BinaryId] =
+  def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
     in =>
       Stream
         .eval(BinaryId.random)
         .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
 
-  def insertWith(id: BinaryId, hint: ContentTypeDetect.Hint): Pipe[F, Byte, Nothing] =
+  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
     bytes =>
       {
         val inserts =

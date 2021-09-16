@@ -228,7 +228,7 @@ lazy val microsite = project
     fs,
     jdbc % "compile->compile,test",
     pglo,
-    minio,
+    minio % "compile->compile,test",
     tikaDetect
   )
 

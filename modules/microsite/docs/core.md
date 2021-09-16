@@ -10,11 +10,12 @@ permalink: core
 The core module depends on the [fs2](https://fs2.io/) library to
 provide a convenient api.
 
-The main idea is to have a convenient and uniform api for
-storing/retrieving files across a variety of backends. The most focus
-is on sql databases. The [jdbc](jdbc.md) and [pglo](pglo.md)
-module aim to provide an efficient way to store even large files in
-databases.
+The main idea is to have a uniform api for storing/retrieving files
+across a variety of backends. The most focus is on sql databases. The
+[jdbc](../jdbc) and [pglo](../pglo) module aim to provide an efficient
+way to store even large files in databases. But there is the
+[minio](../minio) module which provides a S3 compatible object storage
+backend.
 
 A file here is a `Binary[F]` which is a type alias for `Stream[F,
 Byte]`. The `BinaryAttributes` holds some attributes for a binary, the

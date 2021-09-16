@@ -3,7 +3,6 @@ package binny.spec
 import java.security.MessageDigest
 
 import binny.Binary.Implicits._
-import binny.ContentTypeDetect.Hint
 import binny._
 import binny.util.Stopwatch
 import cats.effect.IO

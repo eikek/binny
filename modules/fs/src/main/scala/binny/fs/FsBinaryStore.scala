@@ -14,13 +14,13 @@ final class FsBinaryStore[F[_]: Async](
     logger: Logger[F],
     attrStore: BinaryAttributeStore[F]
 ) extends BinaryStore[F] {
-  def insert(hint: ContentTypeDetect.Hint): Pipe[F, Byte, BinaryId] =
+  def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
     in =>
       Stream
         .eval(BinaryId.random)
         .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
 
-  def insertWith(id: BinaryId, hint: ContentTypeDetect.Hint): Pipe[F, Byte, Nothing] =
+  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
     bytes =>
       {
         val target = config.targetFile(id)

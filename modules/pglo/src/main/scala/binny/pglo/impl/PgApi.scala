@@ -2,7 +2,6 @@ package binny.pglo.impl
 
 import java.security.MessageDigest
 
-import binny.ContentTypeDetect.Hint
 import binny._
 import binny.jdbc.impl.DbRun
 import binny.jdbc.impl.Implicits._

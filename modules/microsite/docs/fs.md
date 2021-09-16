@@ -5,7 +5,7 @@ title: FS
 permalink: fs
 ---
 
-# FS module
+# File System
 
 This wraps the [fs2 Files API](https://fs2.io/#/io?id=files) to create
 a `BinaryStore`.
@@ -22,7 +22,6 @@ next to the file containing the data.
 
 ```scala mdoc
 import binny._
-import binny.ContentTypeDetect.Hint
 import binny.fs._
 import fs2.io.file.{Files, Path}
 import cats.effect.IO

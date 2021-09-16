@@ -7,7 +7,7 @@ import cats.effect._
 import io.minio.MinioClient
 import okhttp3.OkHttpClient
 
-object Config {
+object MinioTestCfg {
   def testing(m: S3KeyMapping, ip: String, port: Int): MinioConfig =
     MinioConfig
       .default(

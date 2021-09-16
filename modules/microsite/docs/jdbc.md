@@ -5,7 +5,7 @@ title: JDBC
 permalink: jdbc
 ---
 
-# JDBC module
+# Generic JDBC
 
 This module provides a `BinaryStore` and `BinaryAttributeStore` using
 JDBC. While it is tested for only H2, PostgreSQL and MariaDB, it
@@ -41,7 +41,6 @@ For the examples here, an in-memory database
 
 ```scala mdoc
 import binny._
-import binny.ContentTypeDetect.Hint
 import binny.util.Logger
 import binny.Binary.Implicits._
 import binny.jdbc._

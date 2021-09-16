@@ -1,6 +1,5 @@
 package binny
 
-import binny.ContentTypeDetect.Hint
 import munit._
 import scodec.bits.ByteVector
 

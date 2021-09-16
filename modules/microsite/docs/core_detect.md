@@ -26,7 +26,6 @@ If no filename is given in the `hint`, it will always return
 
 ```scala mdoc
 import binny._
-import binny.ContentTypeDetect.Hint
 import scodec.bits.ByteVector
 
 ContentTypeDetect.probeFileType
@@ -47,7 +46,6 @@ bytes in conjunction with the provided hints.
 ```scala mdoc
 import binny._
 import binny.tika._
-import binny.ContentTypeDetect.Hint
 import scodec.bits.ByteVector
 
 // using the filename only
