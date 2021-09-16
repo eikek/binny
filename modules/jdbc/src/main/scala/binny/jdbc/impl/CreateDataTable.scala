@@ -3,8 +3,8 @@ package binny.jdbc.impl
 import binny.util.Logger
 import cats.effect.kernel.Sync
 
-/** Provides some table definitions that work with [[binny.jdbc.JdbcBinaryStore[F]] and
-  * [[binny.jdbc.JdbcAttributeStore[F]], respectively. Of course, tables can be created by
+/** Provides some table definitions that work with [[binny.jdbc.JdbcBinaryStore]] and
+  * [[binny.jdbc.JdbcAttributeStore]], respectively. Of course, tables can be created by
   * other means, they must have at least the column definitions presented here.
   */
 object CreateDataTable {

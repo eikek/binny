@@ -35,7 +35,7 @@ object ContentTypeDetect {
       next
   }
 
-  /** An implementation using Java7 [[java.nio.file.spi.FileTypeDetector]] */
+  /** An implementation using Java7 `java.nio.file.spi.FileTypeDetector` */
   val probeFileType: ContentTypeDetect =
     ContentTypeDetect { (_, hint) =>
       hint.filename
