@@ -35,7 +35,7 @@ object CreateDataTable {
   def postgresData[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate[F](
       s"""
-         |CREATE TABLE IF NOT EXISTS "${name}" (
+         |CREATE TABLE IF NOT EXISTS "$name" (
          |  "file_id" varchar(254) not null,
          |  "chunk_nr" int not null,
          |  "chunk_len" int not null,
@@ -48,7 +48,7 @@ object CreateDataTable {
   def postgresAttr[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate(
       s"""
-         |CREATE TABLE IF NOT EXISTS "${name}" (
+         |CREATE TABLE IF NOT EXISTS "$name" (
          |  "file_id" varchar(254) not null,
          |  "sha256" varchar(254) not null,
          |  "content_type" varchar(254) not null,
@@ -61,7 +61,7 @@ object CreateDataTable {
   def mariadbData[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate(
       s"""
-         |CREATE TABLE `${name}` (
+         |CREATE TABLE `$name` (
          |  `file_id` varchar(254) not null,
          |  `chunk_nr` int not null,
          |  `chunk_len` int not null,
@@ -74,7 +74,7 @@ object CreateDataTable {
   def mariadbAttr[F[_]: Sync](name: String)(implicit log: Logger[F]): DbRun[F, Int] =
     DbRun.executeUpdate(
       s"""
-         |CREATE TABLE IF NOT EXISTS `${name}` (
+         |CREATE TABLE IF NOT EXISTS `$name` (
          |  `file_id` varchar(254) not null,
          |  `sha256` varchar(254) not null,
          |  `content_type` varchar(254) not null,

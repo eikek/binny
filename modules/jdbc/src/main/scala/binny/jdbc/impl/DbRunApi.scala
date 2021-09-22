@@ -143,7 +143,7 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
 
       case ChunkInfo.Single =>
         queryChunk(id, 0)
-          .map({
+          .map {
             case Some(c) =>
               range match {
                 case ByteRange.All =>
@@ -156,7 +156,7 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
 
             case None =>
               Chunk.empty[Byte]
-          })
+          }
           .mapF(Stream.eval)
           .mapF(_.flatMap(Stream.chunk))
 

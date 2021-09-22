@@ -100,7 +100,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
 
       val md = MessageDigest.getInstance("SHA-256")
       var len = 0L
-      var ct = (None: Option[SimpleContentType])
+      var ct = None: Option[SimpleContentType]
       val buf = new Array[Byte](chunkSize)
 
       var read = -1

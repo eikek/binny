@@ -10,9 +10,8 @@ import munit.CatsEffectSuite
 trait DbFixtures { self: CatsEffectSuite =>
 
   def h2MemoryDataSource: FunFixture[DataSource] = FunFixture(
-    setup = test => {
-      ConnectionConfig.h2Memory(test.name.replaceAll("\\s+", "_")).dataSource
-    },
+    setup =
+      test => ConnectionConfig.h2Memory(test.name.replaceAll("\\s+", "_")).dataSource,
     teardown = _ => ()
   )
 
