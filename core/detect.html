@@ -1,0 +1,70 @@
+<!DOCTYPE html><html><head><title>Binny: Core API - ContentTypeDetect</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="eikek" /><meta name="description" content="Binny – Scala library for files in databases" /><meta name="og:image" content="/binny/img/poster.png" /><meta name="image" property="og:image" content="/binny/img/poster.png" /><meta name="og:title" content="Binny: Core API - ContentTypeDetect" /><meta name="title" property="og:title" content="Binny: Core API - ContentTypeDetect" /><meta name="og:site_name" content="Binny" /><meta name="og:url" content="https://github.com/eikek/binny" /><meta name="og:type" content="website" /><meta name="og:description" content="Binny – Scala library for files in databases" /><link rel="icon" type="image/png" href="/binny/img/favicon.png" /><meta name="twitter:title" content="Binny: Core API - ContentTypeDetect" /><meta name="twitter:image" content="/binny/img/poster.png" /><meta name="twitter:description" content="Binny – Scala library for files in databases" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="35x35" href="/binny/img/favicon.png" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/binny/highlight/styles/vs.css" /><link rel="stylesheet" href="/binny/css/light-style.css" /></head><body class="docs"><div id="wrapper"><div id="sidebar-wrapper"><div id="sidebar-brand"><a href="/binny/" class="brand"><div class="brand-wrapper"></div><span>Binny</span></a><button id="main-toggle" class="sidebar-toggle"><span class="close"></span></button></div><div class="sidebar-nav"> <div class="sidebar-nav-item  "><a href="/binny/index" title="Home" class="">Home</a></div> <div class="sidebar-nav-item  open"><a href="/binny/core" title="Core Api" class="drop-nested">Core Api</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/core/binarystore" title="BinaryStore" class="">BinaryStore</a> <a href="/binny/core/attrstore" title="BinaryAttributesStore" class="">BinaryAttributesStore</a> <a href="/binny/core/detect" title="ContentTypeDetect" class="active">ContentTypeDetect</a></div></div> <div class="sidebar-nav-item  "><a href="/binny/impls" title="Implementation Modules" class="drop-nested">Implementation Modules</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/fs" title="Filesystem" class="">Filesystem</a> <a href="/binny/jdbc" title="JDBC" class="">JDBC</a> <a href="/binny/pglo" title="PG LargeObject" class="">PG LargeObject</a> <a href="/binny/minio" title="MinIO" class="">MinIO</a></div></div></div></div><div id="page-content-wrapper"><div class="nav"><div class="container-fluid"><div class="row"><div class="col-lg-12"><div class="action-menu pull-left clearfix"><a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars" aria-hidden="true"></i></a></div><ul class="pull-right"><li class="search-nav"><div id="search-dropdown"><label><i class="fa fa-search"></i>Search</label><input id="search-bar" type="text" placeholder="Enter keywords here..." onclick="displayToggleSearch(event)" /><ul id="search-dropdown-content" class="dropdown dropdown-content"></ul></div></li><li id="gh-eyes-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-eye"></i><span>Watchers<span id="eyes" class="label label-default">--</span></span></a></li><li id="gh-stars-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-star-o"></i><span>Stars<span id="stars" class="label label-default">--</span></span></a></li></ul></div></div></div></div><div id="content" data-github-owner="eikek" data-github-repo="binny"><div class="content-wrapper"><section><h1 id="contenttypedetect">ContentTypeDetect</h1>
+
+<p>The content type of a binary is always an interesting thing to know.
+It is (kind of) required when serving files from a http server. The
+content type is part of the <code class="language-plaintext highlighter-rouge">BinaryAttributes</code>.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">ContentTypeDetect</code> trait exists to plug in a detector for the
+content type. The <code class="language-plaintext highlighter-rouge">detect</code> method receives a portion of the data as a
+<code class="language-plaintext highlighter-rouge">ByteVector</code> and some hints - either a filename and/or an advertised
+content type.</p>
+
+<p>You can just use a <code class="language-plaintext highlighter-rouge">ContentTypeDetect.none</code> if you don’t bother.</p>
+
+<p>The core module provides an implementation based on the
+<a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/spi/FileTypeDetector.html"><code class="language-plaintext highlighter-rouge">FileTypeDetector</code></a>
+api present since Java7. This only looks at the filename if present.
+If no filename is given in the <code class="language-plaintext highlighter-rouge">hint</code>, it will always return
+<code class="language-plaintext highlighter-rouge">application/octet-stream</code>.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">binny._</span>
+<span class="k">import</span> <span class="nn">scodec.bits.ByteVector</span>
+
+<span class="nv">ContentTypeDetect</span><span class="o">.</span><span class="py">probeFileType</span>
+  <span class="o">.</span><span class="py">detect</span><span class="o">(</span><span class="nv">ByteVector</span><span class="o">.</span><span class="py">empty</span><span class="o">,</span> <span class="nv">Hint</span><span class="o">.</span><span class="py">filename</span><span class="o">(</span><span class="s">"index.html"</span><span class="o">))</span>
+<span class="c1">// res0: SimpleContentType = SimpleContentType(text/html)</span>
+</code></pre></div></div>
+
+<p>Note, the result above depends on the runtime. It can be modified by
+other jars in the class path, for example. For more reliable results,
+the <code class="language-plaintext highlighter-rouge">binny-tikadetect</code> module is recommended.</p>
+
+<h2 id="tika">Tika</h2>
+
+<p>For a better outcome, the module <code class="language-plaintext highlighter-rouge">binny-tikadetect</code> provides a
+<code class="language-plaintext highlighter-rouge">ContentTypeDetect</code> implemenatiton based on the well known
+<a href="https://tika.apache.org/">tika</a> library. This also looks at the given
+bytes in conjunction with the provided hints.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">binny._</span>
+<span class="k">import</span> <span class="nn">binny.tika._</span>
+<span class="k">import</span> <span class="nn">scodec.bits.ByteVector</span>
+
+<span class="c1">// using the filename only</span>
+<span class="nv">TikaContentTypeDetect</span><span class="o">.</span><span class="py">default</span>
+  <span class="o">.</span><span class="py">detect</span><span class="o">(</span><span class="nv">ByteVector</span><span class="o">.</span><span class="py">empty</span><span class="o">,</span> <span class="nv">Hint</span><span class="o">.</span><span class="py">filename</span><span class="o">(</span><span class="s">"index.html"</span><span class="o">))</span>
+<span class="c1">// res1: SimpleContentType = SimpleContentType(text/html)</span>
+
+<span class="c1">// using the first view bytes</span>
+<span class="nv">TikaContentTypeDetect</span><span class="o">.</span><span class="py">default</span>
+  <span class="o">.</span><span class="py">detect</span><span class="o">(</span><span class="nv">ByteVector</span><span class="o">.</span><span class="py">fromValidBase64</span><span class="o">(</span><span class="s">"iVBORw0KGgoAAAANSUhEUgAAA2I="</span><span class="o">),</span> <span class="nv">Hint</span><span class="o">.</span><span class="py">none</span><span class="o">)</span>
+<span class="c1">// res2: SimpleContentType = SimpleContentType(image/png)</span>
+</code></pre></div></div>
+</section></div></div></div></div><script src="/binny/highlight/highlight.pack.js"></script><script src="/binny/lunr/lunr.js"></script><script>
+// For all code blocks, copy the language from the containing div
+// to the inner code tag (where hljs expects it to be)
+const langPrefix = 'language-';
+document.querySelectorAll(`div[class^='${langPrefix}']`).forEach(function(div) {
+  div.classList.forEach(function(cssClass) {
+    if (cssClass.startsWith(langPrefix)) {
+      const lang = cssClass.substring(langPrefix.length);
+      div.querySelectorAll('pre code').forEach(function(code) {
+        code.classList.add(lang);
+      });
+    }
+  });
+});
+
+hljs.configure({languages:['scala','java','bash']});
+hljs.initHighlightingOnLoad();
+      </script><script src="/binny/js/fathom.js"></script><script>console.info('\x57\x65\x62\x73\x69\x74\x65\x20\x62\x75\x69\x6c\x74\x20\x77\x69\x74\x68\x3a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x5f\x5f\x0a\x20\x20\x20\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x5f\x20\x20\x2f\x20\x2f\x5f\x20\x20\x20\x20\x20\x20\x5f\x5f\x5f\x5f\x20\x5f\x5f\x5f\x20\x20\x28\x5f\x29\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x28\x5f\x29\x20\x2f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x0a\x20\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x60\x5f\x5f\x20\x5c\x2f\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x20\x2f\x20\x5f\x5f\x2f\x20\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x0a\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x5f\x2f\x20\x2f\x20\x2f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x5f\x5f\x2f\x20\x2f\x20\x20\x2f\x20\x2f\x5f\x2f\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x20\x2f\x5f\x2f\x20\x20\x5f\x5f\x28\x5f\x5f\x20\x20\x29\x0a\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2e\x5f\x5f\x5f\x2f\x5c\x5f\x5f\x2f\x20\x20\x20\x20\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x2f\x20\x20\x20\x5c\x5f\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x0a\x0a\x68\x74\x74\x70\x73\x3a\x2f\x2f\x34\x37\x64\x65\x67\x2e\x67\x69\x74\x68\x75\x62\x2e\x69\x6f\x2f\x73\x62\x74\x2d\x6d\x69\x63\x72\x6f\x73\x69\x74\x65\x73')</script><script src="/binny/js/search.js"></script><script src="/binny/js/docs.js"></script></body></html>

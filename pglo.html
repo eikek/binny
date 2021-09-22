@@ -1,0 +1,106 @@
+<!DOCTYPE html><html><head><title>Binny: PGLO</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="eikek" /><meta name="description" content="Binny – Scala library for files in databases" /><meta name="og:image" content="/binny/img/poster.png" /><meta name="image" property="og:image" content="/binny/img/poster.png" /><meta name="og:title" content="Binny: PGLO" /><meta name="title" property="og:title" content="Binny: PGLO" /><meta name="og:site_name" content="Binny" /><meta name="og:url" content="https://github.com/eikek/binny" /><meta name="og:type" content="website" /><meta name="og:description" content="Binny – Scala library for files in databases" /><link rel="icon" type="image/png" href="/binny/img/favicon.png" /><meta name="twitter:title" content="Binny: PGLO" /><meta name="twitter:image" content="/binny/img/poster.png" /><meta name="twitter:description" content="Binny – Scala library for files in databases" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="35x35" href="/binny/img/favicon.png" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/binny/highlight/styles/vs.css" /><link rel="stylesheet" href="/binny/css/light-style.css" /></head><body class="docs"><div id="wrapper"><div id="sidebar-wrapper"><div id="sidebar-brand"><a href="/binny/" class="brand"><div class="brand-wrapper"></div><span>Binny</span></a><button id="main-toggle" class="sidebar-toggle"><span class="close"></span></button></div><div class="sidebar-nav"> <div class="sidebar-nav-item  "><a href="/binny/index" title="Home" class="">Home</a></div> <div class="sidebar-nav-item  "><a href="/binny/core" title="Core Api" class="drop-nested">Core Api</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/core/binarystore" title="BinaryStore" class="">BinaryStore</a> <a href="/binny/core/attrstore" title="BinaryAttributesStore" class="">BinaryAttributesStore</a> <a href="/binny/core/detect" title="ContentTypeDetect" class="">ContentTypeDetect</a></div></div> <div class="sidebar-nav-item  open"><a href="/binny/impls" title="Implementation Modules" class="drop-nested">Implementation Modules</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/fs" title="Filesystem" class="">Filesystem</a> <a href="/binny/jdbc" title="JDBC" class="">JDBC</a> <a href="/binny/pglo" title="PG LargeObject" class="active">PG LargeObject</a> <a href="/binny/minio" title="MinIO" class="">MinIO</a></div></div></div></div><div id="page-content-wrapper"><div class="nav"><div class="container-fluid"><div class="row"><div class="col-lg-12"><div class="action-menu pull-left clearfix"><a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars" aria-hidden="true"></i></a></div><ul class="pull-right"><li class="search-nav"><div id="search-dropdown"><label><i class="fa fa-search"></i>Search</label><input id="search-bar" type="text" placeholder="Enter keywords here..." onclick="displayToggleSearch(event)" /><ul id="search-dropdown-content" class="dropdown dropdown-content"></ul></div></li><li id="gh-eyes-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-eye"></i><span>Watchers<span id="eyes" class="label label-default">--</span></span></a></li><li id="gh-stars-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-star-o"></i><span>Stars<span id="stars" class="label label-default">--</span></span></a></li></ul></div></div></div></div><div id="content" data-github-owner="eikek" data-github-repo="binny"><div class="content-wrapper"><section><h1 id="postgresql-large-objects">PostgreSQL Large Objects</h1>
+
+<p>This module utilises PostgreSQLs <a href="https://www.postgresql.org/docs/current/largeobjects.html">Large
+Objects</a> to
+implement a <code class="language-plaintext highlighter-rouge">BinaryStore</code>. This is then only for PostgreSQL, and it
+also depends on the postgresql jdbc driver.</p>
+
+<p>Using large objects, postgresql stores the data outside its standard
+table space and the object can be referenced by an id. They also allow
+to seek into a specific position, which is used to implement loading
+partial data.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">PgLoBinaryStore</code> also implements <code class="language-plaintext highlighter-rouge">JdbcBinaryStore</code> and provides
+two methods to retrieve a binary. One, the default <code class="language-plaintext highlighter-rouge">findBinary</code>, uses
+one connection per chunk. The other, <code class="language-plaintext highlighter-rouge">findBinaryStateful</code> uses a
+connection for the entire stream.</p>
+
+<h2 id="table-structure">Table Structure</h2>
+
+<p>The table used here is:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="nv">"file_lo"</span> <span class="p">(</span>
+  <span class="nv">"file_id"</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">254</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">PRIMARY</span> <span class="k">KEY</span><span class="p">,</span>
+  <span class="nv">"data_oid"</span> <span class="n">oid</span> <span class="k">NOT</span> <span class="k">NULL</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="usage">Usage</h2>
+
+<p>For the examples to run, a PostgreSQL server is necessary. It is quite
+easy to start one locally, for example with docker.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">binny._</span>
+<span class="k">import</span> <span class="nn">binny.util.Logger</span>
+<span class="k">import</span> <span class="nn">binny.Binary.Implicits._</span>
+<span class="k">import</span> <span class="nn">binny.jdbc.ConnectionConfig</span>
+<span class="k">import</span> <span class="nn">binny.pglo._</span>
+<span class="k">import</span> <span class="nn">fs2.Stream</span>
+<span class="k">import</span> <span class="nn">cats.effect.IO</span>
+<span class="k">import</span> <span class="nn">cats.effect.unsafe.implicits._</span>
+
+
+<span class="k">implicit</span> <span class="k">val</span> <span class="nv">logger</span> <span class="k">=</span> <span class="nv">Logger</span><span class="o">.</span><span class="py">silent</span><span class="o">[</span><span class="kt">IO</span><span class="o">]</span>
+<span class="c1">// logger: Logger[IO] = binny.util.Logger$$anon$2@14c75caf</span>
+
+<span class="k">val</span> <span class="nv">someData</span> <span class="k">=</span> <span class="nv">ExampleData</span><span class="o">.</span><span class="py">file2M</span>
+<span class="c1">// someData: Binary[IO] = Stream(..)</span>
+
+<span class="k">val</span> <span class="nv">run</span> <span class="k">=</span>
+  <span class="k">for</span> <span class="o">{</span>
+    <span class="c1">// start a postgres container and create a DataSource that connects to it</span>
+    <span class="n">postgres</span> <span class="k">&lt;-</span> <span class="nv">Stream</span><span class="o">.</span><span class="py">resource</span><span class="o">(</span><span class="nv">DocUtil</span><span class="o">.</span><span class="py">startPostgresContainer</span><span class="o">)</span>
+    <span class="n">ds</span> <span class="k">=</span> <span class="nc">ConnectionConfig</span><span class="o">(</span><span class="nv">postgres</span><span class="o">.</span><span class="py">jdbcUrl</span><span class="o">,</span> <span class="nv">postgres</span><span class="o">.</span><span class="py">username</span><span class="o">,</span> <span class="nv">postgres</span><span class="o">.</span><span class="py">password</span><span class="o">).</span><span class="py">dataSource</span>
+
+    <span class="c1">// Create the `BinaryStore` and the schema</span>
+    <span class="n">store</span> <span class="k">=</span> <span class="nv">PgLoBinaryStore</span><span class="o">.</span><span class="py">default</span><span class="o">[</span><span class="kt">IO</span><span class="o">](</span><span class="n">logger</span><span class="o">,</span> <span class="n">ds</span><span class="o">)</span>
+    <span class="k">_</span> <span class="k">&lt;-</span> <span class="nv">Stream</span><span class="o">.</span><span class="py">eval</span><span class="o">(</span><span class="nv">PgSetup</span><span class="o">.</span><span class="py">run</span><span class="o">[</span><span class="kt">IO</span><span class="o">](</span><span class="nv">store</span><span class="o">.</span><span class="py">config</span><span class="o">.</span><span class="py">table</span><span class="o">,</span> <span class="n">logger</span><span class="o">,</span> <span class="n">ds</span><span class="o">))</span>
+
+    <span class="c1">// insert some data</span>
+    <span class="n">id</span> <span class="k">&lt;-</span> <span class="nv">someData</span><span class="o">.</span><span class="py">through</span><span class="o">(</span><span class="nv">store</span><span class="o">.</span><span class="py">insert</span><span class="o">(</span><span class="nv">Hint</span><span class="o">.</span><span class="py">none</span><span class="o">))</span>
+
+    <span class="c1">// get the file out</span>
+    <span class="n">bin</span> <span class="k">&lt;-</span> <span class="nv">Stream</span><span class="o">.</span><span class="py">eval</span><span class="o">(</span>
+      <span class="nv">store</span><span class="o">.</span><span class="py">findBinary</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="nc">ByteRange</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">100</span><span class="o">)).</span><span class="py">getOrElse</span><span class="o">(</span><span class="nv">sys</span><span class="o">.</span><span class="py">error</span><span class="o">(</span><span class="s">"not found"</span><span class="o">))</span>
+    <span class="o">)</span>
+    <span class="n">str</span> <span class="k">&lt;-</span> <span class="nv">Stream</span><span class="o">.</span><span class="py">eval</span><span class="o">(</span><span class="nv">bin</span><span class="o">.</span><span class="py">readUtf8String</span><span class="o">)</span>
+  <span class="o">}</span> <span class="k">yield</span> <span class="n">str</span> <span class="o">+</span> <span class="s">"..."</span>
+<span class="c1">// run: Stream[IO[x], String] = Stream(..)</span>
+
+<span class="nv">run</span><span class="o">.</span><span class="py">compile</span><span class="o">.</span><span class="py">lastOrError</span><span class="o">.</span><span class="py">unsafeRunSync</span><span class="o">()</span>
+<span class="c1">// res0: String = """hello world 1</span>
+<span class="c1">// hello world 2</span>
+<span class="c1">// hello world 3</span>
+<span class="c1">// hello world 4</span>
+<span class="c1">// hello world 5</span>
+<span class="c1">// hello world 6</span>
+<span class="c1">// hello world 7</span>
+<span class="c1">// he..."""</span>
+</code></pre></div></div>
+
+<h2 id="jdbcbinarystore">JdbcBinaryStore</h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">PgLoBinaryStore</code> also provides a <code class="language-plaintext highlighter-rouge">findBinaryStateful</code> variant
+just like the <code class="language-plaintext highlighter-rouge">GenericJdbcStore</code>. The default <code class="language-plaintext highlighter-rouge">findBinary</code> method
+creates a byte stream that loads the file in chunks. After every
+chunk, the connection is closed again and the next chunk seeks into
+the large object to start anew. In contrast, the <code class="language-plaintext highlighter-rouge">findBinaryStateful</code>
+method uses a single connection for the entire stream.</p>
+</section></div></div></div></div><script src="/binny/highlight/highlight.pack.js"></script><script src="/binny/lunr/lunr.js"></script><script>
+// For all code blocks, copy the language from the containing div
+// to the inner code tag (where hljs expects it to be)
+const langPrefix = 'language-';
+document.querySelectorAll(`div[class^='${langPrefix}']`).forEach(function(div) {
+  div.classList.forEach(function(cssClass) {
+    if (cssClass.startsWith(langPrefix)) {
+      const lang = cssClass.substring(langPrefix.length);
+      div.querySelectorAll('pre code').forEach(function(code) {
+        code.classList.add(lang);
+      });
+    }
+  });
+});
+
+hljs.configure({languages:['scala','java','bash']});
+hljs.initHighlightingOnLoad();
+      </script><script src="/binny/js/fathom.js"></script><script>console.info('\x57\x65\x62\x73\x69\x74\x65\x20\x62\x75\x69\x6c\x74\x20\x77\x69\x74\x68\x3a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x5f\x5f\x0a\x20\x20\x20\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x5f\x20\x20\x2f\x20\x2f\x5f\x20\x20\x20\x20\x20\x20\x5f\x5f\x5f\x5f\x20\x5f\x5f\x5f\x20\x20\x28\x5f\x29\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x28\x5f\x29\x20\x2f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x0a\x20\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x60\x5f\x5f\x20\x5c\x2f\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x20\x2f\x20\x5f\x5f\x2f\x20\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x0a\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x5f\x2f\x20\x2f\x20\x2f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x5f\x5f\x2f\x20\x2f\x20\x20\x2f\x20\x2f\x5f\x2f\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x20\x2f\x5f\x2f\x20\x20\x5f\x5f\x28\x5f\x5f\x20\x20\x29\x0a\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2e\x5f\x5f\x5f\x2f\x5c\x5f\x5f\x2f\x20\x20\x20\x20\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x2f\x20\x20\x20\x5c\x5f\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x0a\x0a\x68\x74\x74\x70\x73\x3a\x2f\x2f\x34\x37\x64\x65\x67\x2e\x67\x69\x74\x68\x75\x62\x2e\x69\x6f\x2f\x73\x62\x74\x2d\x6d\x69\x63\x72\x6f\x73\x69\x74\x65\x73')</script><script src="/binny/js/search.js"></script><script src="/binny/js/docs.js"></script></body></html>

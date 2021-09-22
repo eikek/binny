@@ -1,0 +1,47 @@
+<!DOCTYPE html><html><head><title>Binny: Home</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="eikek" /><meta name="description" content="Binny – Scala library for files in databases" /><meta name="og:image" content="/binny/img/poster.png" /><meta name="image" property="og:image" content="/binny/img/poster.png" /><meta name="og:title" content="Binny: Home" /><meta name="title" property="og:title" content="Binny: Home" /><meta name="og:site_name" content="Binny" /><meta name="og:url" content="https://github.com/eikek/binny" /><meta name="og:type" content="website" /><meta name="og:description" content="Binny – Scala library for files in databases" /><link rel="icon" type="image/png" href="/binny/img/favicon.png" /><meta name="twitter:title" content="Binny: Home" /><meta name="twitter:image" content="/binny/img/poster.png" /><meta name="twitter:description" content="Binny – Scala library for files in databases" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="35x35" href="/binny/img/favicon.png" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/binny/highlight/styles/vs.css" /><link rel="stylesheet" href="/binny/css/light-style.css" /></head><body class="home"><nav id="navigation" aria-labelledby="main-navigation"><div class="navbar-wrapper container"><div class="navigation-brand"><a href="/binny/" class="brand custom-feature-icon"><div class="icon-wrapper"></div><span class="brand-title">Binny</span></a></div><div class="navigation-menu"><ul><li class="search-nav"><div id="search-dropdown"><label><i class="fa fa-search"></i>Search</label><input id="search-bar" type="text" placeholder="Enter keywords here..." onclick="displayToggleSearch(event)" /><ul id="search-dropdown-content" class="dropdown dropdown-content"></ul></div></li><li><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="nav-item-icon fa fa-lg fa-github" hidden="true"></i><span class="nav-item-text">GitHub</span></a></li></ul></div></div></nav><header id="masthead"><div class="container text-center"><h1 class="masthead-description">Binny – Scala library for files in databases</h1><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer" class="masthead-button">View on GitHub</a></div></header><nav class="menu-container" aria-labelledby="section-navigation"><div id="horizontal-menu"><ul class="horizontal-nav"><li><a class=" active " href="/binny/">Home</a></li><li><a class="" href="/binny/core">Core API</a></li><li><a class="" href="/binny/fs">FS</a></li><li><a class="" href="/binny/jdbc">JDBC</a></li><li><a class="" href="/binny/pglo">PGLO</a></li><li><a class="" href="/binny/minio">MinIO</a></li></ul></div></nav><main id="site-main"><section class="main-content"><div class="container"><div id="content"><h1 id="binny">Binny</h1>
+
+<p>Binny is a Scala library for efficiently storing and retrieving
+(large) binary data from databases, providing a
+<a href="https://github.com/functional-streams-for-scala/fs2">FS2</a> based api.</p>
+
+<p>Binny is provided for Scala 2.13 and 3.</p>
+
+<h2 id="usage">Usage</h2>
+
+<p>With <a href="https://scala-sbt.org">sbt</a>, add the dependencies:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"com.github.eikek" %% "binny-core" % "0.1.0"  // the core library
+// … choose one or more implementation modules
+"com.github.eikek" %% "binny-fs" % "0.1.0"  // implementation based on FS2 `Files` api
+"com.github.eikek" %% "binny-jdbc" % "0.1.0"  // implementation based on JDBC
+"com.github.eikek" %% "binny-pglo" % "0.1.0"  // implementation based on PostgreSQLs LargeObject API
+"com.github.eikek" %% "binny-minio" % "0.1.0"  // implementation for MinIO
+</code></pre></div></div>
+
+<h2 id="license">License</h2>
+
+<p>This project is distributed under the
+<a href="https://spdx.org/licenses/MIT">MIT</a></p>
+
+<p>The logo is from
+<a href="https://openclipart.org/download/256586/1469591207.svg">here</a>.</p>
+</div></div></section></main><footer id="site-footer"><div class="container"><div class="row"><p>Binny is designed and developed by <a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer">eikek</a></p></div><div class="row"><div>
+<p>&copy; 2021- <a href="https://github.com/eikek/binny">Binny v0.1.0</a></p>
+</div></div></div></footer><script src="/binny/highlight/highlight.pack.js"></script><script src="/binny/lunr/lunr.js"></script><script>
+// For all code blocks, copy the language from the containing div
+// to the inner code tag (where hljs expects it to be)
+const langPrefix = 'language-';
+document.querySelectorAll(`div[class^='${langPrefix}']`).forEach(function(div) {
+  div.classList.forEach(function(cssClass) {
+    if (cssClass.startsWith(langPrefix)) {
+      const lang = cssClass.substring(langPrefix.length);
+      div.querySelectorAll('pre code').forEach(function(code) {
+        code.classList.add(lang);
+      });
+    }
+  });
+});
+
+hljs.configure({languages:['scala','java','bash']});
+hljs.initHighlightingOnLoad();
+      </script><script src="/binny/js/fathom.js"></script><script>console.info('\x57\x65\x62\x73\x69\x74\x65\x20\x62\x75\x69\x6c\x74\x20\x77\x69\x74\x68\x3a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x5f\x5f\x0a\x20\x20\x20\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x5f\x20\x20\x2f\x20\x2f\x5f\x20\x20\x20\x20\x20\x20\x5f\x5f\x5f\x5f\x20\x5f\x5f\x5f\x20\x20\x28\x5f\x29\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x28\x5f\x29\x20\x2f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x0a\x20\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x60\x5f\x5f\x20\x5c\x2f\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x20\x2f\x20\x5f\x5f\x2f\x20\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x0a\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x5f\x2f\x20\x2f\x20\x2f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x5f\x5f\x2f\x20\x2f\x20\x20\x2f\x20\x2f\x5f\x2f\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x20\x2f\x5f\x2f\x20\x20\x5f\x5f\x28\x5f\x5f\x20\x20\x29\x0a\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2e\x5f\x5f\x5f\x2f\x5c\x5f\x5f\x2f\x20\x20\x20\x20\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x2f\x20\x20\x20\x5c\x5f\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x0a\x0a\x68\x74\x74\x70\x73\x3a\x2f\x2f\x34\x37\x64\x65\x67\x2e\x67\x69\x74\x68\x75\x62\x2e\x69\x6f\x2f\x73\x62\x74\x2d\x6d\x69\x63\x72\x6f\x73\x69\x74\x65\x73')</script><script src="/binny/js/version-selector.js"></script><script src="/binny/js/search.js"></script></body></html>
