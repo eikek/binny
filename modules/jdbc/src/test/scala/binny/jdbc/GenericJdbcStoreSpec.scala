@@ -87,14 +87,14 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
     for {
       ch <- chunks
       id <- BinaryId.random[IO]
-      res <- ch.traverse({ case (bytes, index) =>
+      res <- ch.traverse { case (bytes, index) =>
         store.insertChunk(
           id,
           ChunkDef.fromTotal(index.toInt, ch.size),
           Hint.none,
           bytes.toByteVector
         )
-      })
+      }
       _ = assertEquals(res.last, InsertChunkResult.Complete)
       _ = assertEquals(res.init.toSet, Set(InsertChunkResult.incomplete))
       attrs <- store.computeAttr(id, Hint.none).getOrElse(sys.error("not found"))
