@@ -21,7 +21,7 @@ next to the file containing the data.</p>
 <span class="k">import</span> <span class="nn">fs2.Stream</span>
 
 <span class="k">val</span> <span class="nv">logger</span> <span class="k">=</span> <span class="nv">binny</span><span class="o">.</span><span class="py">util</span><span class="o">.</span><span class="py">Logger</span><span class="o">.</span><span class="py">silent</span><span class="o">[</span><span class="kt">IO</span><span class="o">]</span>
-<span class="c1">// logger: util.Logger[IO] = binny.util.Logger$$anon$2@7da0587a</span>
+<span class="c1">// logger: util.Logger[IO] = binny.util.Logger$$anon$2@1ae26c59</span>
 <span class="k">val</span> <span class="nv">someData</span> <span class="k">=</span> <span class="nv">ExampleData</span><span class="o">.</span><span class="py">file2M</span>
 <span class="c1">// someData: Binary[IO] = Stream(..)</span>
 
@@ -38,16 +38,16 @@ next to the file containing the data.</p>
 
 <span class="nv">run</span><span class="o">.</span><span class="py">compile</span><span class="o">.</span><span class="py">lastOrError</span><span class="o">.</span><span class="py">unsafeRunSync</span><span class="o">()</span>
 <span class="c1">// res0: (BinaryId, BinaryId, String) = (</span>
-<span class="c1">//   BinaryId(9gK1x35Hvu29xx498JfW1AU56B43pxLgY9gQQU3Qfu9h),</span>
-<span class="c1">//   BinaryId(7g9nh4cMhkUyrkUCUBBeciDSLRvpmpjStHUoJV1rDpt4),</span>
+<span class="c1">//   BinaryId(4qcfuD9aNWpFaFM5U9PufQZStByGwEXNzyAavct3NSGe),</span>
+<span class="c1">//   BinaryId(8xNFwHViHK4BhUXXL6nD7NA94w6pH11nyBAcyyMx6xEu),</span>
 <span class="c1">//   """</span>
-<span class="c1">// 📁 binny-docs-5393623312195526024</span>
-<span class="c1">//   📁 7g</span>
-<span class="c1">//     📁 7g9nh4cMhkUyrkUCUBBeciDSLRvpmpjStHUoJV1rDpt4</span>
+<span class="c1">// 📁 binny-docs-360238709907672069</span>
+<span class="c1">//   📁 4q</span>
+<span class="c1">//     📁 4qcfuD9aNWpFaFM5U9PufQZStByGwEXNzyAavct3NSGe</span>
 <span class="c1">//       · file</span>
 <span class="c1">//       · attr</span>
-<span class="c1">//   📁 9g</span>
-<span class="c1">//     📁 9gK1x35Hvu29xx498JfW1AU56B43pxLgY9gQQU3Qfu9h</span>
+<span class="c1">//   📁 8x</span>
+<span class="c1">//     📁 8xNFwHViHK4BhUXXL6nD7NA94w6pH11nyBAcyyMx6xEu</span>
 <span class="c1">//       · file</span>
 <span class="c1">//       · attr"""</span>
 <span class="c1">// )</span>
@@ -85,7 +85,7 @@ id as its name.</p>
 
 <span class="nv">run2</span><span class="o">.</span><span class="py">compile</span><span class="o">.</span><span class="py">lastOrError</span><span class="o">.</span><span class="py">unsafeRunSync</span><span class="o">()</span>
 <span class="c1">// res1: String = """</span>
-<span class="c1">// 📁 binny-docs-7615928078309879880</span>
+<span class="c1">// 📁 binny-docs-2344000299747809978</span>
 <span class="c1">//   · hello-world.txt</span>
 <span class="c1">//   · hello_world.txt"""</span>
 </code></pre></div></div>
