@@ -101,4 +101,42 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
       _ = assertEquals(attrs, ExampleData.file2MAttr)
     } yield ()
   }
+
+  test("insert chunks out of order concurrently") {
+    val store = binStore()
+    val chunks = ExampleData.file2M
+      .chunkN(JdbcStoreConfig.default.chunkSize)
+      .zipWithIndex
+      .compile
+      .toVector
+      .map(list => scala.util.Random.shuffle(list))
+
+    def insertConcurrent(id: BinaryId) =
+      fs2.Stream
+        .eval(chunks.map(v => v.map(t => (t._1, t._2, v.size))))
+        .flatMap(v => fs2.Stream.emits(v))
+        .parEvalMapUnordered(4) { case (bytes, index, size) =>
+          store.insertChunk(
+            id,
+            ChunkDef.fromTotal(index.toInt, size),
+            Hint.none,
+            bytes.toByteVector
+          )
+        }
+
+    for {
+      id <- BinaryId.random[IO]
+      res <- insertConcurrent(id).compile.toVector
+      attrs <- store.computeAttr(id, Hint.none).getOrElse(sys.error("not found"))
+      _ = assertEquals(attrs, ExampleData.file2MAttr)
+      _ = assertEquals(
+        res.filter(_ == InsertChunkResult.Complete).toSet,
+        Set(InsertChunkResult.complete)
+      )
+      _ = assertEquals(
+        res.filter(_ != InsertChunkResult.Complete).toSet,
+        Set(InsertChunkResult.incomplete)
+      )
+    } yield ()
+  }
 }

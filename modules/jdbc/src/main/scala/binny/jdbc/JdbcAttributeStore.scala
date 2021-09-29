@@ -25,8 +25,13 @@ final class JdbcAttributeStore[F[_]: Sync](
   def saveAttr(id: BinaryId, attrs: F[BinaryAttributes]): F[Unit] = {
     def store(a: BinaryAttributes): F[Unit] =
       (for {
-        n <- dbApi.updateAttr(id, a)
-        _ <- if (n > 0) DbRun.pure[F, Int](n) else dbApi.insertAttr(id, a)
+        insertRes <- dbApi.insertAttr(id, a).attempt
+        _ <- insertRes match {
+          case Left(_) =>
+            dbApi.updateAttr(id, a)
+          case Right(n) =>
+            DbRun.pure[F, Int](n)
+        }
       } yield ()).execute(ds)
     attrs.flatMap(store)
   }
