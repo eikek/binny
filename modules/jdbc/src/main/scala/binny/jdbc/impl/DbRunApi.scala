@@ -26,15 +26,16 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
       chunkIndex: Int,
       chunksTotal: Int,
       bytes: Chunk[Byte]
-  ): DbRun[F, InsertChunkResult] =
-    count(id).flatMap { currentChunks =>
-      val result =
-        if (currentChunks == chunksTotal - 1) InsertChunkResult.complete
-        else InsertChunkResult.incomplete
+  ): DbRun[F, InsertChunkResult] = {
+    val insert =
+      removeChunk(id, chunkIndex).inTX *>
+        insertChunk(id, chunkIndex, bytes).inTX
 
-      removeChunk(id, chunkIndex) *>
-        insertChunk(id, chunkIndex, bytes).map(_ => result)
+    insert *> count(id).map { currentChunks =>
+      if (currentChunks == chunksTotal) InsertChunkResult.complete
+      else InsertChunkResult.incomplete
     }
+  }
 
   def removeChunk(id: BinaryId, chunkIndex: Int): DbRun[F, Int] =
     DbRun.update(s"DELETE FROM $table WHERE file_id = ? AND chunk_nr = ?") { ps =>

@@ -3,14 +3,50 @@ package binny.minio
 import java.io.InputStream
 import java.security.MessageDigest
 
+import scala.jdk.CollectionConverters._
+
 import binny._
 import cats.effect._
 import cats.implicits._
-import fs2.Stream
+import fs2.{Chunk, Stream}
 import io.minio._
 import scodec.bits.ByteVector
 
 final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
+
+  def listObjects(
+      bucket: String,
+      startAfter: Option[String],
+      chunkSize: Int,
+      prefix: Option[String]
+  ): Stream[F, String] = {
+    val chunk =
+      Sync[F].blocking {
+        val args = ListObjectsArgs
+          .builder()
+          .bucket(bucket)
+          .maxKeys(chunkSize)
+
+        startAfter.foreach(args.startAfter)
+        prefix.foreach(args.prefix)
+
+        val result = client.listObjects(args.build())
+        val ch = Chunk.iterable(result.asScala.map(_.get.objectName))
+        (
+          if (ch.isEmpty) Stream.empty else Stream.chunk(ch),
+          ch.last.filter(_ => ch.size == chunkSize)
+        )
+      }
+
+    Stream.eval(chunk).flatMap { case (ch, last) =>
+      last match {
+        case Some(el) =>
+          ch ++ listObjects(bucket, Some(el), chunkSize, prefix)
+        case None =>
+          ch
+      }
+    }
+  }
 
   def bucketExists(name: String): F[Boolean] =
     Sync[F].blocking {

@@ -91,43 +91,28 @@ object GenericJdbcStore {
         chunkDef: ChunkDef,
         hint: Hint,
         data: ByteVector
-    ): F[InsertChunkResult] = {
-      val len = data.size
-      val ch = chunkDef.fold(identity, _.toTotal(config.chunkSize))
-      val isLastChunk = ch.index == ch.total - 1
-      if (ch.index < 0 || ch.index >= ch.total)
-        InsertChunkResult
-          .invalidChunkIndex(
-            s"Index ${ch.index} must not be negative or >= total chunks ${ch.total}"
-          )
-          .pure[F]
-      else if (isLastChunk && len > config.chunkSize)
-        InsertChunkResult
-          .invalidChunkSize(
-            s"Chunk exceeds chunk size: $len > ${config.chunkSize}"
-          )
-          .pure[F]
-      else if (!isLastChunk && len != config.chunkSize)
-        InsertChunkResult
-          .invalidChunkSize(
-            s"Chunk ($len) does not match chunk size (${config.chunkSize})"
-          )
-          .pure[F]
-      else {
-        val insert = dataApi
-          .insertNextChunk(id, ch.index, ch.total, Chunk.byteVector(data))
-          .inTX
-          .execute(ds)
+    ): F[InsertChunkResult] =
+      InsertChunkResult.validateChunk(
+        chunkDef,
+        config.chunkSize,
+        data.length.toInt
+      ) match {
+        case Some(bad) => bad.pure[F]
+        case None =>
+          val len = data.length
+          val ch = chunkDef.fold(identity, _.toTotal(config.chunkSize))
+          val insert = dataApi
+            .insertNextChunk(id, ch.index, ch.total, Chunk.byteVector(data))
+            .execute(ds)
 
-        logger.trace(s"Insert chunk ${ch.index + 1}/${ch.total} of size $len") *>
-          insert.flatTap {
-            case InsertChunkResult.Complete =>
-              saveAttr(id, hint)
-            case _ =>
-              ().pure[F]
-          }
+          logger.trace(s"Insert chunk ${ch.index + 1}/${ch.total} of size $len") *>
+            insert.flatTap {
+              case InsertChunkResult.Complete =>
+                saveAttr(id, hint)
+              case _ =>
+                ().pure[F]
+            }
       }
-    }
 
     /** Finds a binary by its id. The data stream loads the bytes chunk-wise from the
       * database, where on each chunk the connection to the database is closed. This is
