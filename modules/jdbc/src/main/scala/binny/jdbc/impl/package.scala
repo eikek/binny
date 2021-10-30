@@ -14,7 +14,7 @@ package object impl {
   type DbRunIO[A] = DbRun[IO, A]
 
   object DbRun {
-    //implicit private[impl] def logger[F[_]: Sync]: Logger[F] = Logger.silent[F]
+    // implicit private[impl] def logger[F[_]: Sync]: Logger[F] = Logger.silent[F]
     private[this] val counter = new AtomicLong(0)
 
     def apply[F[_], A](f: Connection => F[A]): DbRun[F, A] =

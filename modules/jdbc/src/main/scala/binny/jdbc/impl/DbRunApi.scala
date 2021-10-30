@@ -244,7 +244,7 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
           )
         }
       }
-    }.inTX //necessary so that setFetchSize is effective
+    }.inTX // necessary so that setFetchSize is effective
 
   def queryAttr(id: BinaryId): DbRun[F, Option[BinaryAttributes]] =
     DbRun

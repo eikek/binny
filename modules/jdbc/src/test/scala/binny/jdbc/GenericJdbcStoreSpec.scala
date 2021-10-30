@@ -56,7 +56,7 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
 
   test("failing stream creates no data") {
     val store = binStore()
-    val ds = dataSource //same ds as binStore()
+    val ds = dataSource // same ds as binStore()
     val attrDB = new DbRunApi[IO](JdbcAttrConfig.default.table, logger)
     val dataDB = new DbRunApi[IO](JdbcStoreConfig.default.dataTable, logger)
     for {
