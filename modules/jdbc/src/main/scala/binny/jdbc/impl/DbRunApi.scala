@@ -108,15 +108,10 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
   def insertAllData(
       id: BinaryId,
       data: Stream[F, Chunk[Byte]]
-  ): Stream[F, DbRun[F, Int]] = {
-    val bytes =
-      data.take(1).ifEmpty(Stream.emit(Chunk.empty[Byte])) ++
-        data.drop(1)
-
-    bytes.zipWithIndex.map { case (chunk, index) =>
+  ): Stream[F, DbRun[F, Int]] =
+    data.ifEmpty(Stream.emit(Chunk.empty[Byte])).zipWithIndex.map { case (chunk, index) =>
       insertChunk(id, index.toInt, chunk)
     }
-  }
 
   def delete(id: BinaryId): DbRun[F, Int] =
     DbRun.update(s"DELETE FROM $table WHERE file_id = ?") { ps =>

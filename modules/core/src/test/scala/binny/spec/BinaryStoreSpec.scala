@@ -1,16 +1,17 @@
 package binny.spec
 
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicInteger
 
 import binny.Binary.Implicits._
 import binny._
 import binny.util.{Logger, Stopwatch}
 import cats.effect.IO
-import fs2.Stream
+import fs2.{Chunk, Stream}
 import munit.CatsEffectSuite
+import scodec.bits.ByteVector
 
 abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
-
   private[this] val logger = Logger.stdout[IO](Logger.Level.Warn, getClass.getSimpleName)
 
   val binStore: Fixture[S]
@@ -78,5 +79,47 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
       id <- ExampleData.fail.through(store.insert(hint)).attempt
       _ = assert(id.isLeft)
     } yield ()).compile.drain
+  }
+
+  test("evaluate effects once") {
+    val store = binStore()
+    val exampleData = new BinaryStoreSpec.ChunkWithEffects(30, 15)
+
+    for {
+      id <- exampleData.stream
+        .through(store.insert(hint))
+        .compile
+        .lastOrError
+
+      bin <- store.findBinary(id, ByteRange.All).getOrElse(sys.error("not found"))
+      binSha <- bin.messageDigest(md).compile.to(ByteVector)
+      _ = assertEquals(binSha, exampleData.sha256)
+      _ = assertEquals(exampleData.getState, 15)
+    } yield ()
+  }
+}
+
+object BinaryStoreSpec {
+
+  final class ChunkWithEffects(chunkSize: Int, length: Int) {
+    private[this] val counter = new AtomicInteger(0)
+
+    val stream: Stream[IO, Byte] =
+      Stream
+        .eval(IO {
+          val n = counter.getAndIncrement()
+          Chunk.vector(Vector.fill(chunkSize)(n.toByte))
+        })
+        .repeatN(length)
+        .flatMap(Stream.chunk)
+
+    val sha256 =
+      Stream
+        .range(0, length)
+        .flatMap(n => Stream.chunk(Chunk.vector(Vector.fill(chunkSize)(n.toByte))))
+        .through(fs2.hash.sha256)
+        .to(ByteVector)
+
+    def getState: Int = counter.get()
   }
 }
