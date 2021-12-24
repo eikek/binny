@@ -11,7 +11,7 @@ object Dependencies {
   val postgresVersion = "42.3.1"
   val slf4jVersion = "1.7.32"
   val testContainersVersion = "0.39.12"
-  val tikaVersion = "2.2.0"
+  val tikaVersion = "2.2.1"
   val icu4jVersion = "69.1"
   val kindProjectorVersion = "0.10.3"
   val minioVersion = "8.3.4"
