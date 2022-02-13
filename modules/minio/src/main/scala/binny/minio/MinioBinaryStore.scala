@@ -1,5 +1,7 @@
 package binny.minio
 
+import java.io.BufferedInputStream
+
 import binny._
 import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
@@ -10,7 +12,7 @@ import io.minio.MinioClient
 
 final class MinioBinaryStore[F[_]: Async](
     val config: MinioConfig,
-    client: MinioClient,
+    private[minio] val client: MinioClient,
     attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
 ) extends BinaryStore[F] {
@@ -27,11 +29,11 @@ final class MinioBinaryStore[F[_]: Async](
     bytes =>
       Stream.eval {
         val key = config.keyMapping(id)
-        val inStream = bytes.through(fs2.io.toInputStream)
+        val inStream = bytes.through(fs2.io.toInputStream).map(new BufferedInputStream(_))
         val upload =
           for {
             _ <- Stream.eval(minio.makeBucketIfMissing(key.bucket))
-            _ <- minio.uploadObject(key, config.partSize, inStream)
+            _ <- minio.uploadObject(key, config.partSize, config.detect, hint, inStream)
           } yield ()
 
         for {
