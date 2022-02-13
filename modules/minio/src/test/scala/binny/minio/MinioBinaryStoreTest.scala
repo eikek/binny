@@ -1,10 +1,11 @@
 package binny.minio
 
-import binny.BinaryAttributeStore
+import binny._
 import binny.spec.BinaryStoreSpec
 import binny.util.Logger
 import cats.effect._
 import com.dimafeng.testcontainers.munit.TestContainerForAll
+import io.minio.GetObjectArgs
 
 class MinioBinaryStoreTest
     extends BinaryStoreSpec[MinioBinaryStore[IO]]
@@ -29,6 +30,27 @@ class MinioBinaryStoreTest
 
   override def munitFixtures: Seq[Fixture[_]] = List(binStore)
 
+  test("uploading file with content-type") {
+    val hint = Hint("logo.png", "image/png")
+    val detect = ContentTypeDetect.probeFileType
+    val ctype =
+      ExampleData.logoPng.through(detect.detectStream[IO](hint)).compile.lastOrError
+    assertIO(ctype, SimpleContentType("image/png"))
+
+    val fs = binStore()
+    for {
+      binId <- ExampleData.logoPng.through(fs.insert(hint)).compile.lastOrError
+      getResp = fs.client.getObject {
+        val go = new GetObjectArgs.Builder()
+        val s3key = fs.config.keyMapping(binId)
+        go.bucket(s3key.bucket)
+        go.`object`(s3key.objectName)
+        go.build()
+      }
+      ct = getResp.headers().get("Content-Type")
+      _ = assertEquals(ct, "image/png")
+    } yield ()
+  }
 }
 
 object MinioBinaryStoreTest {}

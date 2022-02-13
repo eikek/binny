@@ -15,7 +15,7 @@ import scodec.bits.ByteVector
 final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
 
   def listObjects(
-      bucket: String,
+      bucket: Option[String],
       startAfter: Option[String],
       chunkSize: Int,
       prefix: Option[String]
@@ -24,9 +24,9 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       Sync[F].blocking {
         val args = ListObjectsArgs
           .builder()
-          .bucket(bucket)
           .maxKeys(chunkSize)
 
+        bucket.foreach(args.bucket)
         startAfter.foreach(args.startAfter)
         prefix.foreach(args.prefix)
 
@@ -74,13 +74,26 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
   def uploadObject(
       key: S3Key,
       partSize: Int,
+      detect: ContentTypeDetect,
+      hint: Hint,
       in: Stream[F, InputStream]
   ): Stream[F, Unit] =
     in.evalMap(javaStream =>
       Sync[F].blocking {
+        val ct =
+          if (javaStream.markSupported()) {
+            val buffer = new Array[Byte](32)
+            javaStream.mark(65)
+            val read = javaStream.read(buffer)
+            val ret = detect.detect(ByteVector.view(buffer, 0, read), hint)
+            javaStream.reset()
+            ret
+          } else SimpleContentType.octetStream
+
         val args = new PutObjectArgs.Builder()
           .bucket(key.bucket)
           .`object`(key.objectName)
+          .contentType(ct.contentType)
           .stream(javaStream, -1, partSize)
           .build()
 
