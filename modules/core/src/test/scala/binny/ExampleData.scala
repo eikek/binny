@@ -16,6 +16,12 @@ object ExampleData {
       64 * 1024
     )
 
+  def logoPng: Binary[IO] =
+    fs2.io.readInputStream(
+      IO(getClass.getResource("/logo.png").openStream()),
+      64 * 1024
+    )
+
   val file2MAttr: BinaryAttributes =
     BinaryAttributes(
       ByteVector.fromValidHex(
