@@ -52,6 +52,11 @@ final class FsBinaryStore[F[_]: Async](
     Impl.load[F](target, range, config.chunkSize)
   }
 
+  def exists(id: BinaryId) = {
+    val target = config.targetFile(id)
+    Files[F].exists(target)
+  }
+
   def delete(id: BinaryId): F[Unit] = {
     val target = config.targetFile(id)
     attrStore.deleteAttr(id) *> Impl.delete[F](target).map(_ => ())

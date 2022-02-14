@@ -76,6 +76,11 @@ final class MinioBinaryStore[F[_]: Async](
     })
   }
 
+  def exists(id: BinaryId) = {
+    val key = config.makeS3Key(id)
+    minio.statObject(key)
+  }
+
   def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =
     attrStore.findAttr(id)
 

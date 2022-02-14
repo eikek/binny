@@ -7,6 +7,7 @@ import binny.Binary.Implicits._
 import binny._
 import binny.util.{Logger, Stopwatch}
 import cats.effect.IO
+import cats.implicits._
 import fs2.{Chunk, Stream}
 import munit.CatsEffectSuite
 import scodec.bits.ByteVector
@@ -19,6 +20,20 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
   val hint: Hint = Hint.none
   val md = MessageDigest.getInstance("SHA-256")
   def noFileError: Binary[IO] = sys.error("No binary found")
+
+  test("insert and load concurrently") {
+    val store = binStore()
+    for {
+      ids <- Stream(ExampleData.file2M, ExampleData.helloWorld, ExampleData.logoPng)
+        .covary[IO]
+        .parEvalMap(3)(data => data.through(store.insert(hint)).compile.lastOrError)
+        .compile
+        .toVector
+
+      files <- ids.toList.traverse(store.findBinary(_, ByteRange.All).value)
+      _ = assertEquals(files.flatten.size, 3)
+    } yield ()
+  }
 
   test("insert and load") {
     val store = binStore()
