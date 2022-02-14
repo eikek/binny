@@ -6,7 +6,7 @@ import fs2.io.file.Path
 final case class FsAttrConfig(base: Path, mapping: PathMapping) {
 
   def targetFile(id: BinaryId): Path =
-    mapping(base, id)
+    mapping.targetFile(base, id)
 
 }
 

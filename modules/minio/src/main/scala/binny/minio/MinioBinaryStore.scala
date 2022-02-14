@@ -19,6 +19,18 @@ final class MinioBinaryStore[F[_]: Async](
 
   private[this] val minio = new Minio[F](client)
 
+  def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] = {
+    def listBucket(bucket: String) =
+      minio
+        .listObjects(bucket, None, chunkSize, prefix)
+        .map(BinaryId.apply)
+
+    minio
+      .listBuckets()
+      .filter(config.keyMapping.bucketFilter)
+      .flatMap(listBucket)
+  }
+
   def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
     in =>
       Stream
@@ -28,7 +40,7 @@ final class MinioBinaryStore[F[_]: Async](
   def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
     bytes =>
       Stream.eval {
-        val key = config.keyMapping(id)
+        val key = config.makeS3Key(id)
         val inStream = bytes.through(fs2.io.toInputStream).map(new BufferedInputStream(_))
         val upload =
           for {
@@ -52,12 +64,12 @@ final class MinioBinaryStore[F[_]: Async](
       }.drain
 
   def delete(id: BinaryId): F[Unit] = {
-    val key = config.keyMapping(id)
+    val key = config.makeS3Key(id)
     minio.deleteObject(key)
   }
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
-    val key = config.keyMapping(id)
+    val key = config.makeS3Key(id)
     OptionT(minio.statObject(key).map {
       case true  => Some(dataStream(key, range))
       case false => None

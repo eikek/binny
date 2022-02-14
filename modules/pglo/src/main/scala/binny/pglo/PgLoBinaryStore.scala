@@ -113,8 +113,8 @@ final class PgLoBinaryStore[F[_]: Sync](
     } yield a
   }
 
-  def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =
-    attrStore.findAttr(id)
+  def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] =
+    pg.listAllIds(prefix, chunkSize, ds)
 }
 
 object PgLoBinaryStore {

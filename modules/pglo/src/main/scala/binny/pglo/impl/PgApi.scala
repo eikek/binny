@@ -1,10 +1,11 @@
 package binny.pglo.impl
 
 import java.security.MessageDigest
+import javax.sql.DataSource
 
 import binny._
-import binny.jdbc.impl.DbRun
 import binny.jdbc.impl.Implicits._
+import binny.jdbc.impl.{DbRun, DbRunApi}
 import binny.util.Logger
 import cats.data.OptionT
 import cats.effect._
@@ -26,6 +27,15 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
          |);
          |""".stripMargin
     )
+
+  def listAllIds(
+      prefix: Option[String],
+      chunkSize: Int,
+      ds: DataSource
+  ): Stream[F, BinaryId] = {
+    val dbapi = new DbRunApi[F](table, logger)
+    dbapi.listAllIds(prefix, chunkSize, ds)
+  }
 
   def loManager: DbRun[F, LargeObjectManager] =
     DbRun.delay(_.unwrap(classOf[PGConnection]).getLargeObjectAPI)
