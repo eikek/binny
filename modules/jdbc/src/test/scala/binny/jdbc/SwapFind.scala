@@ -17,6 +17,9 @@ final class SwapFind[F[_]](delegate: JdbcBinaryStore[F]) extends BinaryStore[F] 
 
   def delete(id: BinaryId): F[Unit] =
     delegate.delete(id)
+
+  def listIds(prefix: Option[String], chunkSize: Int) =
+    delegate.listIds(prefix, chunkSize)
 }
 
 object SwapFind {

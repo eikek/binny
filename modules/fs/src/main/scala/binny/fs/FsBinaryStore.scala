@@ -57,12 +57,17 @@ final class FsBinaryStore[F[_]: Async](
     attrStore.deleteAttr(id) *> Impl.delete[F](target).map(_ => ())
   }
 
-  def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =
-    attrStore.findAttr(id)
+  def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] = {
+    val all = Files[F]
+      .walk(config.baseDir)
+      .evalFilter(p => Files[F].isRegularFile(p))
+      .mapFilter(p => config.mapping.idFromFile(p))
+
+    prefix.map(p => all.filter(_.id.startsWith(p))).getOrElse(all)
+  }
 }
 
 object FsBinaryStore {
-
   def apply[F[_]: Async](
       config: FsStoreConfig,
       logger: Logger[F],

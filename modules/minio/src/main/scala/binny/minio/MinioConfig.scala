@@ -1,6 +1,6 @@
 package binny.minio
 
-import binny.ContentTypeDetect
+import binny.{BinaryId, ContentTypeDetect}
 
 final case class MinioConfig(
     endpoint: String,
@@ -13,6 +13,9 @@ final case class MinioConfig(
 ) {
   def withContentTypeDetect(dt: ContentTypeDetect): MinioConfig =
     copy(detect = dt)
+
+  def makeS3Key(id: BinaryId): S3Key =
+    S3Key(keyMapping.toBucket(id), id.id)
 
   override def toString: String =
     s"S3Config(endpoint=$endpoint, accessKey=$accessKey, secretKey=***)"

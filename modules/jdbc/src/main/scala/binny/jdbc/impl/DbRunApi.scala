@@ -3,7 +3,9 @@ package binny.jdbc.impl
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
 import java.sql.ResultSet
+import javax.sql.DataSource
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Using
 
 import binny.jdbc.impl.DbRunApi.ChunkInfo
@@ -63,6 +65,54 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
       }
       .use(DbRun.readOpt[F, Unit](_ => ()))
       .mapF(OptionT.apply)
+
+  def listIdsChunk(
+      start: String,
+      prefix: Option[String],
+      chunkSize: Int
+  ): DbRun[F, Chunk[BinaryId]] = {
+    val clause = prefix.map(_ => s"AND file_id like ?").getOrElse("")
+    val select =
+      DbRun.query(
+        s"SELECT DISTINCT file_id FROM $table WHERE file_id > ? $clause ORDER BY file_id"
+      ) { ps =>
+        ps.setString(1, start)
+        prefix.map(p => ps.setString(2, s"$p%")).getOrElse(())
+      }
+
+    def readRows(resultSet: ResultSet): F[Chunk[BinaryId]] =
+      Sync[F].blocking {
+        val buffer = ListBuffer.empty[BinaryId]
+        while (resultSet.next() && buffer.size < chunkSize)
+          buffer += BinaryId(resultSet.getString(1))
+        Chunk.seq(buffer)
+      }
+
+    DbRun
+      .makeTX[F]
+      .flatMap(_ => select)
+      .mapF(_.use(readRows))
+  }
+
+  def listAllIds(
+      prefix: Option[String],
+      chunkSize: Int,
+      ds: DataSource
+  ): Stream[F, BinaryId] = {
+    def selectNext(start: String): Stream[F, BinaryId] =
+      Stream
+        .eval(listIdsChunk(start, prefix, chunkSize).execute(ds))
+        .flatMap { chunk =>
+          chunk.last match {
+            case Some(lastId) if chunk.size == chunkSize =>
+              Stream.chunk(chunk) ++ selectNext(lastId.id)
+            case _ =>
+              Stream.chunk(chunk)
+          }
+        }
+
+    selectNext("")
+  }
 
   def insertEmptyAttr(id: BinaryId): DbRun[F, Int] =
     DbRun.update(

@@ -16,7 +16,7 @@ final case class FsStoreConfig(
     copy(detect = dt)
 
   def targetFile(id: BinaryId): Path =
-    mapping(baseDir, id)
+    mapping.targetFile(baseDir, id)
 
   def withMapping(pm: PathMapping): FsStoreConfig =
     copy(mapping = pm)

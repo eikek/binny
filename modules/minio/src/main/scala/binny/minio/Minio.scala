@@ -14,19 +14,25 @@ import scodec.bits.ByteVector
 
 final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
 
+  def listBuckets(): Stream[F, String] =
+    Stream
+      .emits(client.listBuckets().asScala)
+      .covary[F]
+      .map(_.name())
+
   def listObjects(
-      bucket: Option[String],
+      bucket: String,
       startAfter: Option[String],
-      chunkSize: Int,
+      maxKeys: Int,
       prefix: Option[String]
   ): Stream[F, String] = {
     val chunk =
       Sync[F].blocking {
         val args = ListObjectsArgs
           .builder()
-          .maxKeys(chunkSize)
+          .bucket(bucket)
+          .maxKeys(maxKeys)
 
-        bucket.foreach(args.bucket)
         startAfter.foreach(args.startAfter)
         prefix.foreach(args.prefix)
 
@@ -34,14 +40,14 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
         val ch = Chunk.iterable(result.asScala.map(_.get.objectName))
         (
           if (ch.isEmpty) Stream.empty else Stream.chunk(ch),
-          ch.last.filter(_ => ch.size == chunkSize)
+          ch.last.filter(_ => ch.size == maxKeys)
         )
       }
 
     Stream.eval(chunk).flatMap { case (ch, last) =>
       last match {
         case Some(el) =>
-          ch ++ listObjects(bucket, Some(el), chunkSize, prefix)
+          ch ++ listObjects(bucket, Some(el), maxKeys, prefix)
         case None =>
           ch
       }

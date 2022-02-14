@@ -7,6 +7,9 @@ import fs2.{Pipe, Stream}
 
 trait BinaryStore[F[_]] {
 
+  /** Returns a set of ids currently available in this store. */
+  def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId]
+
   /** Insert the given bytes creating a new id. */
   def insert(hint: Hint): Pipe[F, Byte, BinaryId]
 
@@ -25,6 +28,9 @@ trait BinaryStore[F[_]] {
 object BinaryStore {
   def none[F[_]: Sync]: BinaryStore[F] =
     new BinaryStore[F] {
+      def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] =
+        Stream.empty
+
       def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] =
         OptionT.none
 

@@ -97,6 +97,32 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
       _ = assertEquals(exampleData.getState, 15)
     } yield ()
   }
+
+  test("listing binary ids") {
+    val store = binStore()
+
+    val id1 = BinaryId("abc123")
+    val id2 = BinaryId("abc678")
+    val id3 = BinaryId("oo00oo")
+    Stream(
+      id1 -> ExampleData.logoPng,
+      id2 -> ExampleData.file2M,
+      id3 -> ExampleData.helloWorld[IO]
+    )
+      .flatMap { case (id, file) => file.through(store.insertWith(id, Hint.none)) }
+      .compile
+      .drain
+      .unsafeRunSync()
+
+    val all1 = store.listIds(Some(""), 10).compile.toVector.unsafeRunSync()
+    val all2 = store.listIds(None, 10).compile.toVector.unsafeRunSync()
+    val all3 = store.listIds(None, 1).compile.toVector.unsafeRunSync()
+    assertEquals(all1, all2)
+    assertEquals(all1, all3)
+
+    val abcOnly = store.listIds(Some("abc"), 50).compile.toVector.unsafeRunSync()
+    assertEquals(abcOnly.toSet, Set(id1, id2))
+  }
 }
 
 object BinaryStoreSpec {
