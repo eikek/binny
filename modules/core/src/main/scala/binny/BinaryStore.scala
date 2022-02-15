@@ -21,6 +21,11 @@ trait BinaryStore[F[_]] {
   /** Finds a binary by its id. The range argument controls which part to return. */
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]]
 
+  /** Check if a file exists. Same as `findBinary().isDefined`, but usually more
+    * efficiently implemented.
+    */
+  def exists(id: BinaryId): F[Boolean]
+
   /** Deletes all data associated to the given id. */
   def delete(id: BinaryId): F[Unit]
 }
@@ -33,6 +38,8 @@ object BinaryStore {
 
       def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] =
         OptionT.none
+
+      def exists(id: BinaryId) = false.pure[F]
 
       def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
         _ => Stream.eval(BinaryId.random[F])

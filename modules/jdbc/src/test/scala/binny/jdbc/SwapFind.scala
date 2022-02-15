@@ -15,6 +15,9 @@ final class SwapFind[F[_]](delegate: JdbcBinaryStore[F]) extends BinaryStore[F] 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] =
     delegate.findBinaryStateful(id, range)
 
+  def exists(id: BinaryId) =
+    delegate.exists(id)
+
   def delete(id: BinaryId): F[Unit] =
     delegate.delete(id)
 

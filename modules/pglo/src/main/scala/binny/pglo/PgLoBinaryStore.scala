@@ -78,6 +78,9 @@ final class PgLoBinaryStore[F[_]: Sync](
     OptionT(pg.findOid(id).execute(ds)).map(oid => bytes(oid))
   }
 
+  def exists(id: BinaryId) =
+    pg.exists(id).execute(ds).isDefined
+
   /** Finds the binary by its id and returns the bytes as a stream that uses a single
     * connection to the database. The connection is closed when the stream is terminated.
     */

@@ -125,6 +125,9 @@ object GenericJdbcStore {
         .execute(ds)
         .map(_ => dataStream(id, range))
 
+    def exists(id: BinaryId) =
+      dataApi.exists(id).execute(ds).isDefined
+
     def findBinaryStateful(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] =
       dataApi
         .exists(id)

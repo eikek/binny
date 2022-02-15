@@ -54,7 +54,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
     }
   }
 
-  def bucketExists(name: String): F[Boolean] =
+  private def bucketExists(name: String): F[Boolean] =
     Sync[F].blocking {
       val args = BucketExistsArgs
         .builder()
@@ -63,7 +63,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       client.bucketExists(args)
     }
 
-  def makeBucket(name: String): F[Unit] = {
+  private def makeBucket(name: String): F[Unit] = {
     val args = MakeBucketArgs
       .builder()
       .bucket(name)
@@ -73,8 +73,17 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
 
   def makeBucketIfMissing(name: String): F[Unit] =
     bucketExists(name).flatMap {
-      case true  => ().pure[F]
-      case false => makeBucket(name)
+      case true => ().pure[F]
+      case false =>
+        makeBucket(name).attempt.flatMap {
+          case Right(n) => n.pure[F]
+          case Left(ex) =>
+            // check if another request created the bucket in the meantime, if not throw
+            bucketExists(name).flatMap {
+              case true  => ().pure[F]
+              case false => Sync[F].raiseError(ex)
+            }
+        }
     }
 
   def uploadObject(
