@@ -1,6 +1,5 @@
 package binny.spec
 
-import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
 
 import binny.Binary.Implicits._
@@ -12,13 +11,14 @@ import fs2.{Chunk, Stream}
 import munit.CatsEffectSuite
 import scodec.bits.ByteVector
 
-abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
+abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
+    extends CatsEffectSuite
+    with StreamAssertion {
   private[this] val logger = Logger.stdout[IO](Logger.Level.Warn, getClass.getSimpleName)
 
   val binStore: Fixture[S]
 
   val hint: Hint = Hint.none
-  val md = MessageDigest.getInstance("SHA-256")
   def noFileError: Binary[IO] = sys.error("No binary found")
 
   test("insert and load concurrently") {
@@ -41,14 +41,12 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
       .flatMap(data =>
         for {
           id <- data.through(store.insert(hint))
-          sha <- data.messageDigest(md).chunks.head
           bin <- Stream.eval(
             store
               .findBinary(id, ByteRange.All)
               .getOrElse(noFileError)
           )
-          shaEl <- bin.messageDigest(md).chunks.head
-          _ = assertEquals(shaEl, sha)
+          _ <- Stream.eval(assertBinaryEquals(bin, data))
         } yield ()
       )
       .compile
@@ -107,8 +105,8 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite {
         .lastOrError
 
       bin <- store.findBinary(id, ByteRange.All).getOrElse(sys.error("not found"))
-      binSha <- bin.messageDigest(md).compile.to(ByteVector)
-      _ = assertEquals(binSha, exampleData.sha256)
+      binSha <- shaString(bin)
+      _ = assertEquals(binSha, exampleData.sha256.toHex)
       _ = assertEquals(exampleData.getState, 15)
     } yield ()
   }
