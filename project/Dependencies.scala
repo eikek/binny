@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val fs2Version = "3.2.4"
+  val fs2Version = "3.2.5"
   val h2Version = "2.1.210"
   val munitVersion = "0.7.29"
   val munitCatsEffectVersion = "1.0.7"
@@ -10,7 +10,7 @@ object Dependencies {
   val mariaDbVersion = "3.0.3"
   val postgresVersion = "42.3.3"
   val slf4jVersion = "1.7.36"
-  val testContainersVersion = "0.40.1"
+  val testContainersVersion = "0.40.2"
   val tikaVersion = "2.3.0"
   val icu4jVersion = "69.1"
   val kindProjectorVersion = "0.10.3"
