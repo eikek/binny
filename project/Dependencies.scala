@@ -10,7 +10,7 @@ object Dependencies {
   val mariaDbVersion = "3.0.3"
   val postgresVersion = "42.3.3"
   val slf4jVersion = "1.7.36"
-  val testContainersVersion = "0.40.1"
+  val testContainersVersion = "0.40.2"
   val tikaVersion = "2.3.0"
   val icu4jVersion = "69.1"
   val kindProjectorVersion = "0.10.3"
