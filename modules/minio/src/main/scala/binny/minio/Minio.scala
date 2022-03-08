@@ -30,6 +30,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       Sync[F].blocking {
         val args = ListObjectsArgs
           .builder()
+          .recursive(true)
           .bucket(bucket)
           .maxKeys(maxKeys)
 
@@ -135,7 +136,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
     Sync[F].blocking(client.statObject(args)).attempt.map(_.isRight)
   }
 
-  def getObject(key: S3Key, range: ByteRange): F[InputStream] = {
+  def getObject(key: S3Key, range: ByteRange): F[GetObjectResponse] = {
     val aargs = GetObjectArgs
       .builder()
       .bucket(key.bucket)

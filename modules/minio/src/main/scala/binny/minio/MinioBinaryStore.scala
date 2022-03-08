@@ -1,13 +1,13 @@
 package binny.minio
 
-import java.io.BufferedInputStream
+import java.io.{BufferedInputStream, InputStream}
 
 import binny._
 import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
-import fs2.{Pipe, Stream}
+import fs2.{Chunk, Pipe, Stream}
 import io.minio.MinioClient
 
 final class MinioBinaryStore[F[_]: Async](
@@ -25,10 +25,11 @@ final class MinioBinaryStore[F[_]: Async](
         .listObjects(bucket, None, chunkSize, prefix)
         .map(BinaryId.apply)
 
-    minio
-      .listBuckets()
-      .filter(config.keyMapping.bucketFilter)
-      .flatMap(listBucket)
+    Stream.eval(logger.info(s"List ids with filter: $prefix")) *>
+      minio
+        .listBuckets()
+        .filter(config.keyMapping.bucketFilter)
+        .flatMap(listBucket)
   }
 
   def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
@@ -85,8 +86,10 @@ final class MinioBinaryStore[F[_]: Async](
     attrStore.findAttr(id)
 
   private def dataStream(key: S3Key, range: ByteRange): Stream[F, Byte] = {
-    val fin = minio.getObject(key, range)
-    fs2.io.readInputStream(fin, config.chunkSize, closeAfterUse = true)
+    val fin = minio.getObject(key, range).map(a => a: InputStream)
+    fs2.io
+      .unsafeReadInputStream(fin, config.chunkSize, closeAfterUse = true)
+      .mapChunks(c => Chunk.byteVector(c.toByteVector))
   }
 }
 
