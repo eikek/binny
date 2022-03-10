@@ -51,6 +51,16 @@ class MinioBinaryStoreTest
       _ = assertEquals(ct, "image/png")
     } yield ()
   }
+
+  test("listing files with folder structure") {
+    val fs = binStore()
+    val binId = BinaryId("folderA/folderB/test.png")
+    for {
+      _ <- ExampleData.logoPng.through(fs.insertWith(binId, Hint.none)).compile.drain
+      all <- fs.listIds(Some("folder"), 20).compile.toVector
+      _ = assertEquals(all, Vector(binId))
+    } yield ()
+  }
 }
 
 object MinioBinaryStoreTest {}

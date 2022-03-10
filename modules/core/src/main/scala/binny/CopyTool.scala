@@ -59,7 +59,7 @@ object CopyTool {
       c <- copied.compile.foldMonoid
       _ <- Stopwatch.show(w)(d =>
         logger.info(
-          s"Copying ${c.success} files and ${c.exist} by par=$maxConcurrent existing took $d"
+          s"Copying ${c.success} files and ${c.exist} existing (by par=$maxConcurrent) took $d"
         )
       )
     } yield c
