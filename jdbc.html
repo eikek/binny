@@ -66,9 +66,9 @@ defines some settings, like the table name and chunk size to use.</p>
 <span class="k">val</span> <span class="nv">dataSource</span> <span class="k">=</span> <span class="nv">ConnectionConfig</span><span class="o">.</span><span class="py">h2Memory</span><span class="o">(</span><span class="s">"docs"</span><span class="o">).</span><span class="py">dataSource</span>
 <span class="c1">// dataSource: javax.sql.DataSource = ds0: url=jdbc:h2:mem:docs;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1 user=sa</span>
 <span class="k">implicit</span> <span class="k">val</span> <span class="nv">logger</span> <span class="k">=</span> <span class="nv">Logger</span><span class="o">.</span><span class="py">silent</span><span class="o">[</span><span class="kt">IO</span><span class="o">]</span>
-<span class="c1">// logger: Logger[IO] = binny.util.Logger$$anon$2@28322fd3</span>
+<span class="c1">// logger: Logger[IO] = binny.util.Logger$$anon$2@181b8d0c</span>
 <span class="k">val</span> <span class="nv">store</span> <span class="k">=</span> <span class="nv">GenericJdbcStore</span><span class="o">.</span><span class="py">default</span><span class="o">[</span><span class="kt">IO</span><span class="o">](</span><span class="n">dataSource</span><span class="o">,</span> <span class="nv">Logger</span><span class="o">.</span><span class="py">silent</span><span class="o">[</span><span class="kt">IO</span><span class="o">])</span>
-<span class="c1">// store: GenericJdbcStore[IO] = binny.jdbc.GenericJdbcStore$Impl@7e47a922</span>
+<span class="c1">// store: GenericJdbcStore[IO] = binny.jdbc.GenericJdbcStore$Impl@376a34fb</span>
 
 <span class="c1">// creates the schema, the filenames are from the default config</span>
 <span class="nv">DatabaseSetup</span><span class="o">.</span><span class="py">runBoth</span><span class="o">[</span><span class="kt">IO</span><span class="o">](</span><span class="nv">Dbms</span><span class="o">.</span><span class="py">H2</span><span class="o">,</span> <span class="n">dataSource</span><span class="o">,</span> <span class="s">"file_chunk"</span><span class="o">,</span> <span class="s">"file_attr"</span><span class="o">).</span><span class="py">unsafeRunSync</span><span class="o">()</span>
@@ -78,7 +78,7 @@ defines some settings, like the table name and chunk size to use.</p>
 <span class="c1">// someData: Binary[IO] = Stream(..)</span>
 <span class="k">val</span> <span class="nv">id</span> <span class="k">=</span> <span class="nv">someData</span><span class="o">.</span><span class="py">through</span><span class="o">(</span><span class="nv">store</span><span class="o">.</span><span class="py">insert</span><span class="o">(</span><span class="nv">Hint</span><span class="o">.</span><span class="py">filename</span><span class="o">(</span><span class="s">"test.txt"</span><span class="o">)))</span>
   <span class="o">.</span><span class="py">compile</span><span class="o">.</span><span class="py">lastOrError</span><span class="o">.</span><span class="py">unsafeRunSync</span><span class="o">()</span>
-<span class="c1">// id: BinaryId = BinaryId(Ff3nxYpC8gK5PQHFHwXCKAvSWt4hrWVJmmRg7bXNefVo)</span>
+<span class="c1">// id: BinaryId = BinaryId(En4BJM6c155jXerH2YTYf4h428wocRFV56q6megex2FR)</span>
 
 <span class="c1">// get the file out</span>
 <span class="nv">store</span><span class="o">.</span><span class="py">findBinary</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="nv">ByteRange</span><span class="o">.</span><span class="py">All</span><span class="o">).</span><span class="py">getOrElse</span><span class="o">(</span><span class="nv">sys</span><span class="o">.</span><span class="py">error</span><span class="o">(</span><span class="s">"not found"</span><span class="o">))</span>
@@ -95,12 +95,12 @@ defines some settings, like the table name and chunk size to use.</p>
 different table.</p>
 
 <div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">val</span> <span class="nv">attrStore</span> <span class="k">=</span> <span class="nc">JdbcAttributeStore</span><span class="o">(</span><span class="nv">JdbcAttrConfig</span><span class="o">.</span><span class="py">default</span><span class="o">,</span> <span class="n">dataSource</span><span class="o">,</span> <span class="n">logger</span><span class="o">)</span>
-<span class="c1">// attrStore: JdbcAttributeStore[IO[A]] = binny.jdbc.JdbcAttributeStore@618b147b</span>
+<span class="c1">// attrStore: JdbcAttributeStore[IO[A]] = binny.jdbc.JdbcAttributeStore@5d63d553</span>
 <span class="nv">attrStore</span><span class="o">.</span><span class="py">findAttr</span><span class="o">(</span><span class="n">id</span><span class="o">).</span><span class="py">getOrElse</span><span class="o">(</span><span class="nv">sys</span><span class="o">.</span><span class="py">error</span><span class="o">(</span><span class="s">"not found"</span><span class="o">)).</span><span class="py">unsafeRunSync</span><span class="o">()</span>
 <span class="c1">// res2: BinaryAttributes = BinaryAttributes(</span>
 <span class="c1">//   sha256 = Chunk(</span>
 <span class="c1">//     bytes = View(</span>
-<span class="c1">//       at = scodec.bits.ByteVector$AtArray@674c9079,</span>
+<span class="c1">//       at = scodec.bits.ByteVector$AtArray@5e147821,</span>
 <span class="c1">//       offset = 0L,</span>
 <span class="c1">//       size = 32L</span>
 <span class="c1">//     )</span>
