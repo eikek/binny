@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val fs2Version = "3.2.6"
+  val fs2Version = "3.2.7"
   val h2Version = "2.1.210"
   val munitVersion = "0.7.29"
   val munitCatsEffectVersion = "1.0.7"
