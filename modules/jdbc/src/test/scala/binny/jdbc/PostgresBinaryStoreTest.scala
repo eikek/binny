@@ -12,7 +12,7 @@ class PostgresBinaryStoreTest extends GenericJdbcStoreSpec with DbFixtures {
 
   val logger = Logger.stdout[IO](Logger.Level.Off, getClass.getSimpleName)
 
-  val container = new AtomicReference[JdbcDatabaseContainer]()
+  val container = new AtomicReference[JdbcDatabaseContainer]
 
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))

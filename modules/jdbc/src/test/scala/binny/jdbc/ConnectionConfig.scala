@@ -20,21 +20,21 @@ final case class ConnectionConfig(
   def dataSource: DataSource =
     dbms match {
       case Dbms.PostgreSQL =>
-        val ds = new PGSimpleDataSource()
+        val ds = new PGSimpleDataSource
         ds.setUser(user)
         ds.setPassword(password)
         ds.setURL(url)
         ds
 
       case Dbms.H2 =>
-        val ds = new JdbcDataSource()
+        val ds = new JdbcDataSource
         ds.setUser(user)
         ds.setPassword(password)
         ds.setURL(url)
         ds
 
       case Dbms.MariaDB =>
-        val ds = new MariaDbDataSource()
+        val ds = new MariaDbDataSource
         ds.setUser(user)
         ds.setPassword(password)
         ds.setUrl(url)

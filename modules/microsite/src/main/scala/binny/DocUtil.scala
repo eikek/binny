@@ -55,5 +55,5 @@ object DocUtil {
 
   def startMinIOContainer: Resource[IO, MinioContainer.MinioCnt] =
     Resource
-      .make(IO(new MinioContainer.Def().start()))(cnt => IO(cnt.stop()))
+      .make(IO(new MinioContainer.Def.start()))(cnt => IO(cnt.stop()))
 }

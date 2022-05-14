@@ -106,7 +106,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
             ret
           } else SimpleContentType.octetStream
 
-        val args = new PutObjectArgs.Builder()
+        val args = new PutObjectArgs.Builder
           .bucket(key.bucket)
           .`object`(key.objectName)
           .contentType(ct.contentType)

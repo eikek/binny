@@ -41,7 +41,7 @@ class MinioBinaryStoreTest
     for {
       binId <- ExampleData.logoPng.through(fs.insert(hint)).compile.lastOrError
       getResp = fs.client.getObject {
-        val go = new GetObjectArgs.Builder()
+        val go = new GetObjectArgs.Builder
         val s3key = fs.config.makeS3Key(binId)
         go.bucket(s3key.bucket)
         go.`object`(s3key.objectName)

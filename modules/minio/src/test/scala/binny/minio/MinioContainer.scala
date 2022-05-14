@@ -18,7 +18,7 @@ object MinioContainer {
     waitStrategy = Wait.defaultWaitStrategy()
   )
 
-  class Def extends GenericContainer.Def[MinioCnt](new MinioCnt()) {}
+  class Def extends GenericContainer.Def[MinioCnt](new MinioCnt) {}
 
   final class MinioCnt extends GenericContainer(container) {
 

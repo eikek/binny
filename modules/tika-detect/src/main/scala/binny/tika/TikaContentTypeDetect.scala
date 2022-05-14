@@ -15,7 +15,7 @@ final class TikaContentTypeDetect(tika: Detector) extends ContentTypeDetect {
 object TikaContentTypeDetect {
 
   def default: TikaContentTypeDetect =
-    fromTikaConfig(new TikaConfig())
+    fromTikaConfig(new TikaConfig)
 
   def fromTikaConfig(tc: TikaConfig): TikaContentTypeDetect =
     new TikaContentTypeDetect(tc.getDetector)

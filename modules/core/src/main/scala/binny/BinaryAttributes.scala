@@ -21,17 +21,17 @@ object BinaryAttributes {
     BinaryAttributes(ByteVector.empty, SimpleContentType.octetStream, 0L)
 
   def asString(ba: BinaryAttributes): String = {
-    val props = new Properties()
+    val props = new Properties
     props.setProperty("sha256", ba.sha256.toBase64)
     props.setProperty("contentType", ba.contentType.contentType)
     props.setProperty("length", ba.length.toString)
-    val baos = new ByteArrayOutputStream()
+    val baos = new ByteArrayOutputStream
     props.store(baos, "binary attributes")
     baos.toString("ISO-8859-1")
   }
 
   def fromString(str: String): Either[String, BinaryAttributes] = {
-    val props = new Properties()
+    val props = new Properties
     for {
       _ <- Try(props.load(new StringReader(str))).toEither.left.map(_.getMessage)
       sha256 <- Option(props.getProperty("sha256"))

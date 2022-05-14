@@ -35,7 +35,7 @@ object MinioTestCfg {
       MinioClient
         .builder()
         .httpClient(
-          new OkHttpClient.Builder().connectTimeout(Duration.ofMillis(300)).build()
+          new OkHttpClient.Builder.connectTimeout(Duration.ofMillis(300)).build()
         )
         .endpoint(endpoint)
         .credentials(accessKey, secretKey)

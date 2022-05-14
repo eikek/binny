@@ -12,7 +12,7 @@ class MariaDbBinaryStoreTest extends GenericJdbcStoreSpec with DbFixtures {
 
   val logger = Logger.stdout[IO](Logger.Level.Off, getClass.getSimpleName)
 
-  val container = new AtomicReference[JdbcDatabaseContainer]()
+  val container = new AtomicReference[JdbcDatabaseContainer]
 
   val containerDef: MariaDBContainer.Def =
     MariaDBContainer.Def(DockerImageName.parse("mariadb:10.5"))

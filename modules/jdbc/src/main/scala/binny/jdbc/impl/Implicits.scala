@@ -36,7 +36,7 @@ object Implicits {
   }
 
   implicit def functionKInstance[F[_]]: F ~> DbRun[F, *] =
-    new (F ~> DbRun[F, *]) {
+    new F ~> DbRun[F, *] {
       def apply[X](fx: F[X]) = DbRun(_ => fx)
     }
 }

@@ -99,7 +99,7 @@ object RangeCalc {
         val count = len / chunkSize
         val stream = go(off.toInt).take(count)
         if (rest == 0) stream
-        else stream ++ Stream.emit(ByteRange.Chunk(off + (count * chunkSize), rest))
+        else stream ++ Stream.emit(ByteRange.Chunk(off + count * chunkSize, rest))
     }
 
   }
