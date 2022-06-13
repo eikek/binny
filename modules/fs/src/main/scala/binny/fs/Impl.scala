@@ -6,14 +6,14 @@ import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
 import fs2.io.file.{Files, Flags, Path}
-import fs2.{INothing, Pipe, Stream}
+import fs2.{Pipe, Stream}
 
 private[fs] object Impl {
 
   def write[F[_]: Async](
       targetFile: Path,
       overwriteMode: OverwriteMode
-  ): Pipe[F, Byte, INothing] =
+  ): Pipe[F, Byte, Nothing] =
     bytes =>
       Stream.eval(Files[F].exists(targetFile)).flatMap {
         case true =>

@@ -23,7 +23,7 @@ object MinioContainer {
   final class MinioCnt extends GenericContainer(container) {
 
     def endpoint =
-      s"http://${underlyingUnsafeContainer.getContainerIpAddress}:${underlyingUnsafeContainer.getMappedPort(port)}"
+      s"http://${underlyingUnsafeContainer.getHost}:${underlyingUnsafeContainer.getMappedPort(port)}"
     val accessKey = MinioContainer.accessKey
     val secretKey = MinioContainer.secretKey
 
