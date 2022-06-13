@@ -7,7 +7,7 @@ object Dependencies {
   val munitVersion = "0.7.29"
   val munitCatsEffectVersion = "1.0.7"
   val organizeImportsVersion = "0.5.0"
-  val mariaDbVersion = "3.0.4"
+  val mariaDbVersion = "3.0.5"
   val postgresVersion = "42.3.6"
   val slf4jVersion = "1.7.36"
   val testContainersVersion = "0.40.7"
