@@ -3,14 +3,16 @@ package binny
 sealed trait InsertChunkResult
 
 object InsertChunkResult {
+  sealed trait Success extends InsertChunkResult
+  sealed trait Failure extends InsertChunkResult
 
-  case object Complete extends InsertChunkResult
+  case object Complete extends Success
 
-  case object Incomplete extends InsertChunkResult
+  case object Incomplete extends Success
 
-  final case class InvalidChunkSize(msg: String) extends InsertChunkResult
+  final case class InvalidChunkSize(msg: String) extends Failure
 
-  final case class InvalidChunkIndex(msg: String) extends InsertChunkResult
+  final case class InvalidChunkIndex(msg: String) extends Failure
 
   def complete: InsertChunkResult = Complete
 

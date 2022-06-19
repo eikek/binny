@@ -1,7 +1,8 @@
 package binny.fs
 
+import java.nio.file.{Files => NioFiles}
+
 import binny._
-import binny.fs.FsStoreConfig.OverwriteMode
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
@@ -61,6 +62,9 @@ private[fs] object Impl {
   def delete[F[_]: Async](targetFile: Path): F[Boolean] =
     Files[F].deleteIfExists(targetFile)
 
+  def deleteDir[F[_]: Async](dir: Path): F[Unit] =
+    Files[F].deleteRecursively(dir)
+
   def writeAttrs[F[_]: Async](file: Path, attrs: BinaryAttributes): F[Unit] =
     (Stream
       .eval(file.parent.map(Files[F].createDirectories).getOrElse(().pure[F]))
@@ -93,4 +97,6 @@ private[fs] object Impl {
         (None: Option[binny.BinaryAttributes]).pure[F]
     })
 
+  def loadAll[F[_]: Sync](file: Path): F[Array[Byte]] =
+    Sync[F].blocking(NioFiles.readAllBytes(file.toNioPath))
 }

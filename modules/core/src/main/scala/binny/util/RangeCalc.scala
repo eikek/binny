@@ -67,22 +67,31 @@ object RangeCalc {
   /** Give a chunk, chops off some bytes according to the give offsets. This can only
     * affect the first and last chunk. The `index` defines which chunk it is.
     */
-  def chop(ch: Chunk[Byte], offsets: Offsets, index: Int): Chunk[Byte] = {
-    val mods: List[Modify] = List(
-      Modify.when(index == offsets.lastChunk && offsets.takeEnd > 0)(
-        _.take(offsets.takeEnd)
-      ),
-      Modify.when(index == offsets.firstChunk && offsets.dropStart > 0)(
-        _.drop(offsets.dropStart)
-      )
-    )
-    mods.foldRight(ch)(_.apply(_))
-  }
+  def chop(ch: Chunk[Byte], offsets: Offsets, index: Int): Chunk[Byte] =
+    chopOffsets(offsets, index) match {
+      case (Some(start), Some(end)) =>
+        ch.drop(start).take(end)
+      case (Some(start), None) =>
+        ch.drop(start)
+      case (None, Some(end)) =>
+        ch.take(end)
+      case (None, None) =>
+        ch
+    }
 
-  private type Modify = Chunk[Byte] => Chunk[Byte]
-  private object Modify {
-    def when(cond: Boolean)(f: Modify): Modify =
-      if (cond) f else identity
+  def chopOffsets(offsets: Offsets, chunkIndex: Int): (Option[Int], Option[Int]) = {
+    val end =
+      if (chunkIndex == offsets.lastChunk && offsets.takeEnd > 0)
+        Some(offsets.takeEnd)
+      else None
+
+    val start =
+      if (chunkIndex == offsets.firstChunk && offsets.dropStart > 0)
+        Some(offsets.dropStart)
+      else
+        None
+
+    start -> end
   }
 
   /** Given a chunkSize, generates an possibly infinite stream of chunk definitions. */
