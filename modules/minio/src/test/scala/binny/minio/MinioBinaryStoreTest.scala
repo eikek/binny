@@ -13,6 +13,10 @@ class MinioBinaryStoreTest
 
   override val containerDef: MinioContainer.Def = new MinioContainer.Def
 
+  // As soon as two test classes use the minio container, things get scary
+  override def afterContainersStart(containers: MinioContainer): Unit =
+    Thread.sleep(100)
+
   val logger = Logger.stdout[IO](Logger.Level.Off, getClass.getSimpleName)
   val binStore: Fixture[MinioBinaryStore[IO]] =
     ResourceSuiteLocalFixture(
@@ -62,5 +66,3 @@ class MinioBinaryStoreTest
     } yield ()
   }
 }
-
-object MinioBinaryStoreTest {}
