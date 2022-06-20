@@ -118,6 +118,26 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       }
     )
 
+  def uploadObject(
+      key: S3Key,
+      partSize: Int,
+      detect: ContentTypeDetect,
+      hint: Hint,
+      in: ByteVector
+  ): F[Unit] =
+    Sync[F].blocking {
+      val ct = detect.detect(in, hint)
+      val args = new PutObjectArgs.Builder()
+        .bucket(key.bucket)
+        .`object`(key.objectName)
+        .contentType(ct.contentType)
+        .stream(in.toInputStream, in.length, partSize)
+        .build()
+
+      client.putObject(args)
+      ()
+    }
+
   def deleteObject(key: S3Key): F[Unit] = {
     val args = RemoveObjectArgs
       .builder()
@@ -125,6 +145,14 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       .`object`(key.objectName)
       .build()
     Sync[F].blocking(client.removeObject(args))
+  }
+
+  def deleteBucket(name: String): F[Unit] = {
+    val args = RemoveBucketArgs
+      .builder()
+      .bucket(name)
+      .build()
+    Sync[F].blocking(client.removeBucket(args))
   }
 
   def statObject(key: S3Key): F[Boolean] = {
@@ -148,6 +176,13 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
         aargs.offset(offset).length(length.toLong).build()
     }
     Sync[F].blocking(client.getObject(args))
+  }
+
+  def getObjectAsStream(key: S3Key, chunkSize: Int, range: ByteRange): Stream[F, Byte] = {
+    val fin = getObject(key, range).map(a => a: InputStream)
+    fs2.io
+      .unsafeReadInputStream(fin, chunkSize, closeAfterUse = true)
+      .mapChunks(c => Chunk.byteVector(c.toByteVector))
   }
 
   def computeAttr(

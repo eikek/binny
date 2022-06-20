@@ -1,13 +1,13 @@
 package binny.minio
 
-import java.io.{BufferedInputStream, InputStream}
+import java.io.BufferedInputStream
 
 import binny._
 import binny.util.{Logger, Stopwatch}
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
-import fs2.{Chunk, Pipe, Stream}
+import fs2.{Pipe, Stream}
 import io.minio.MinioClient
 
 final class MinioBinaryStore[F[_]: Async](
@@ -72,7 +72,7 @@ final class MinioBinaryStore[F[_]: Async](
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val key = config.makeS3Key(id)
     OptionT(minio.statObject(key).map {
-      case true  => Some(dataStream(key, range))
+      case true  => Some(minio.getObjectAsStream(key, config.chunkSize, range))
       case false => None
     })
   }
@@ -84,13 +84,6 @@ final class MinioBinaryStore[F[_]: Async](
 
   def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =
     attrStore.findAttr(id)
-
-  private def dataStream(key: S3Key, range: ByteRange): Stream[F, Byte] = {
-    val fin = minio.getObject(key, range).map(a => a: InputStream)
-    fs2.io
-      .unsafeReadInputStream(fin, config.chunkSize, closeAfterUse = true)
-      .mapChunks(c => Chunk.byteVector(c.toByteVector))
-  }
 }
 
 object MinioBinaryStore {

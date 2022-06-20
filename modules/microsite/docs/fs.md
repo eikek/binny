@@ -81,3 +81,20 @@ run2.compile.lastOrError.unsafeRunSync()
 A `PathMapping` is a function `(Path, BinaryId) => Path)` where the
 given path is the base directory. So you can easily create a custom
 layout.
+
+
+## FsChunkedBinaryStore
+
+The `FsChunkedBinaryStore` implements `ChunkedBinaryStore` to allow
+storing chunks independently. This is useful if chunks are received in
+random order and the whole file is not available as complete stream.
+
+This is implemented by storing each chunk as a file and concatenating
+these when loading. Therefore, a `DirectoryMapping` is required that
+maps a `BinaryId` to a directory (and not a file as `PathMapping`
+does). For binaries that are provided as a complete stream, it stores
+just one chunk file - same as `FsBinaryStore` does.
+
+However, in order to use this the complete size of the file must be
+known up front. This is needed to know when the last chunk is
+received.

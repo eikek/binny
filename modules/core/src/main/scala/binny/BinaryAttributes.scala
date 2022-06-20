@@ -56,10 +56,23 @@ object BinaryAttributes {
         in.chunks.fold(State.empty)(_.update(ct, hint)(_)).map(_.toAttributes)
       }
 
-  final private class State(md: MessageDigest, len: Long, ct: Option[SimpleContentType]) {
+  final private[binny] class State(
+      md: MessageDigest,
+      len: Long,
+      ct: Option[SimpleContentType]
+  ) {
     def update(detect: ContentTypeDetect, hint: Hint)(c: Chunk[Byte]): State = {
       md.update(c.toArraySlice.values)
       new State(md, len + c.size, ct.orElse(Some(detect.detect(c.toByteVector, hint))))
+    }
+
+    def update(detect: ContentTypeDetect, hint: Hint, c: Array[Byte]): State = {
+      md.update(c)
+      new State(
+        md,
+        len + c.length,
+        ct.orElse(Some(detect.detect(ByteVector.view(c), hint)))
+      )
     }
 
     def toAttributes: BinaryAttributes =
@@ -69,7 +82,7 @@ object BinaryAttributes {
         len
       )
   }
-  private object State {
+  private[binny] object State {
     def empty = new State(MessageDigest.getInstance("SHA-256"), 0, None)
   }
 }

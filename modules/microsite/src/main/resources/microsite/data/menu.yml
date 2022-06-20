@@ -12,6 +12,9 @@ options:
       - title: BinaryAttributesStore
         url: core/attrstore
 
+      - title: ChunkedBinaryStore
+        url: core/chunkedstore
+
       - title: ContentTypeDetect
         url: core/detect
 

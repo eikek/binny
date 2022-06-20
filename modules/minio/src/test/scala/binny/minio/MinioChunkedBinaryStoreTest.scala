@@ -1,14 +1,14 @@
 package binny.minio
 
 import binny._
-import binny.spec.BinaryStoreSpec
+import binny.spec.ChunkedBinaryStoreSpec
 import binny.util.Logger
 import cats.effect._
 import com.dimafeng.testcontainers.munit.TestContainerForAll
 import io.minio.GetObjectArgs
 
-class MinioBinaryStoreTest
-    extends BinaryStoreSpec[MinioBinaryStore[IO]]
+class MinioChunkedBinaryStoreTest
+    extends ChunkedBinaryStoreSpec[MinioChunkedBinaryStore[IO]]
     with TestContainerForAll {
 
   override val containerDef: MinioContainer.Def = new MinioContainer.Def
@@ -18,13 +18,13 @@ class MinioBinaryStoreTest
     Thread.sleep(100)
 
   val logger = Logger.stdout[IO](Logger.Level.Off, getClass.getSimpleName)
-  val binStore: Fixture[MinioBinaryStore[IO]] =
+  val binStore: Fixture[MinioChunkedBinaryStore[IO]] =
     ResourceSuiteLocalFixture(
       "minio-store",
       Resource
         .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
         .map(cnt =>
-          MinioBinaryStore(
+          MinioChunkedBinaryStore(
             cnt.createConfig(S3KeyMapping.constant("testing")),
             BinaryAttributeStore.empty[IO],
             logger
@@ -46,7 +46,7 @@ class MinioBinaryStoreTest
       binId <- ExampleData.logoPng.through(fs.insert(hint)).compile.lastOrError
       getResp = fs.client.getObject {
         val go = new GetObjectArgs.Builder()
-        val s3key = fs.config.makeS3Key(binId)
+        val s3key = fs.keyMapping.makeS3Key(binId)
         go.bucket(s3key.bucket)
         go.`object`(s3key.objectName)
         go.build()
