@@ -6,12 +6,12 @@ import cats.data.OptionT
 import cats.effect._
 import cats.syntax.all._
 import fs2.Stream
-import io.minio.MinioClient
+import io.minio.MinioAsyncClient
 import scodec.bits.ByteVector
 
 final class MinioChunkedBinaryStore[F[_]: Async](
     val config: MinioConfig,
-    private[minio] val client: MinioClient,
+    private[minio] val client: MinioAsyncClient,
     attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
 ) extends ChunkedBinaryStore[F] {
@@ -171,7 +171,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
 object MinioChunkedBinaryStore {
   def apply[F[_]: Async](
       config: MinioConfig,
-      client: MinioClient,
+      client: MinioAsyncClient,
       attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioChunkedBinaryStore[F] =
@@ -184,7 +184,7 @@ object MinioChunkedBinaryStore {
   ): MinioChunkedBinaryStore[F] =
     new MinioChunkedBinaryStore[F](
       config,
-      MinioClient
+      MinioAsyncClient
         .builder()
         .endpoint(config.endpoint)
         .credentials(config.accessKey, config.secretKey)

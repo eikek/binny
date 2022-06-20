@@ -8,11 +8,11 @@ import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
 import fs2.{Pipe, Stream}
-import io.minio.MinioClient
+import io.minio.MinioAsyncClient
 
 final class MinioBinaryStore[F[_]: Async](
     val config: MinioConfig,
-    private[minio] val client: MinioClient,
+    private[minio] val client: MinioAsyncClient,
     attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
 ) extends BinaryStore[F] {
@@ -90,7 +90,7 @@ object MinioBinaryStore {
 
   def apply[F[_]: Async](
       config: MinioConfig,
-      client: MinioClient,
+      client: MinioAsyncClient,
       attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioBinaryStore[F] =
@@ -103,7 +103,7 @@ object MinioBinaryStore {
   ): MinioBinaryStore[F] =
     new MinioBinaryStore[F](
       config,
-      MinioClient
+      MinioAsyncClient
         .builder()
         .endpoint(config.endpoint)
         .credentials(config.accessKey, config.secretKey)
