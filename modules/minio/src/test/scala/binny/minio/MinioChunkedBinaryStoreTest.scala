@@ -15,7 +15,7 @@ class MinioChunkedBinaryStoreTest
 
   // As soon as two test classes use the minio container, things get scary
   override def afterContainersStart(containers: MinioContainer): Unit =
-    Thread.sleep(100)
+    Thread.sleep(200)
 
   val logger = Logger.stdout[IO](Logger.Level.Off, getClass.getSimpleName)
   val binStore: Fixture[MinioChunkedBinaryStore[IO]] =
@@ -44,13 +44,13 @@ class MinioChunkedBinaryStoreTest
     val fs = binStore()
     for {
       binId <- ExampleData.logoPng.through(fs.insert(hint)).compile.lastOrError
-      getResp = fs.client.getObject {
+      getResp <- IO.fromCompletableFuture(IO(fs.client.getObject {
         val go = new GetObjectArgs.Builder()
         val s3key = fs.keyMapping.makeS3Key(binId)
         go.bucket(s3key.bucket)
         go.`object`(s3key.objectName)
         go.build()
-      }
+      }))
       ct = getResp.headers().get("Content-Type")
       _ = assertEquals(ct, "image/png")
     } yield ()

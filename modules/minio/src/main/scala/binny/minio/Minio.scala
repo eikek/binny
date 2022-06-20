@@ -2,6 +2,7 @@ package binny.minio
 
 import java.io.InputStream
 import java.security.MessageDigest
+import java.util.concurrent.CompletableFuture
 
 import scala.jdk.CollectionConverters._
 
@@ -12,12 +13,16 @@ import fs2.{Chunk, Stream}
 import io.minio._
 import scodec.bits.ByteVector
 
-final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
+final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
+  val async = Async[F]
+
+  private def future[A](f: => CompletableFuture[A]): F[A] =
+    async.fromCompletableFuture(Async[F].delay(f))
 
   def listBuckets(): Stream[F, String] =
     Stream
-      .emits(client.listBuckets().asScala)
-      .covary[F]
+      .eval(future(client.listBuckets()))
+      .flatMap(jl => Stream.chunk(Chunk.iterable(jl.asScala)))
       .map(_.name())
 
   def listObjects(
@@ -55,21 +60,20 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
     }
   }
 
-  private def bucketExists(name: String): F[Boolean] =
-    Sync[F].blocking {
-      val args = BucketExistsArgs
-        .builder()
-        .bucket(name)
-        .build()
-      client.bucketExists(args)
-    }
+  private def bucketExists(name: String): F[Boolean] = {
+    val args = BucketExistsArgs
+      .builder()
+      .bucket(name)
+      .build()
+    future(client.bucketExists(args)).map(_.booleanValue())
+  }
 
   private def makeBucket(name: String): F[Unit] = {
     val args = MakeBucketArgs
       .builder()
       .bucket(name)
       .build()
-    Sync[F].blocking(client.makeBucket(args))
+    future(client.makeBucket(args)).void
   }
 
   def makeBucketIfMissing(name: String): F[Unit] =
@@ -95,8 +99,8 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       in: Stream[F, InputStream]
   ): Stream[F, Unit] =
     in.evalMap(javaStream =>
-      Sync[F].blocking {
-        val ct =
+      for {
+        ct <- Sync[F].blocking {
           if (javaStream.markSupported()) {
             val buffer = new Array[Byte](32)
             javaStream.mark(65)
@@ -105,17 +109,16 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
             javaStream.reset()
             ret
           } else SimpleContentType.octetStream
-
-        val args = new PutObjectArgs.Builder()
+        }
+        args = new PutObjectArgs.Builder()
           .bucket(key.bucket)
           .`object`(key.objectName)
           .contentType(ct.contentType)
           .stream(javaStream, -1, partSize)
           .build()
 
-        client.putObject(args)
-        ()
-      }
+        _ <- future(client.putObject(args))
+      } yield ()
     )
 
   def uploadObject(
@@ -124,19 +127,17 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       detect: ContentTypeDetect,
       hint: Hint,
       in: ByteVector
-  ): F[Unit] =
-    Sync[F].blocking {
-      val ct = detect.detect(in, hint)
-      val args = new PutObjectArgs.Builder()
-        .bucket(key.bucket)
-        .`object`(key.objectName)
-        .contentType(ct.contentType)
-        .stream(in.toInputStream, in.length, partSize)
-        .build()
+  ): F[ObjectWriteResponse] = {
+    val ct = detect.detect(in, hint)
+    val args = new PutObjectArgs.Builder()
+      .bucket(key.bucket)
+      .`object`(key.objectName)
+      .contentType(ct.contentType)
+      .stream(in.toInputStream, in.length, partSize)
+      .build()
 
-      client.putObject(args)
-      ()
-    }
+    future(client.putObject(args))
+  }
 
   def deleteObject(key: S3Key): F[Unit] = {
     val args = RemoveObjectArgs
@@ -144,7 +145,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       .bucket(key.bucket)
       .`object`(key.objectName)
       .build()
-    Sync[F].blocking(client.removeObject(args))
+    future(client.removeObject(args)).void
   }
 
   def deleteBucket(name: String): F[Unit] = {
@@ -152,7 +153,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       .builder()
       .bucket(name)
       .build()
-    Sync[F].blocking(client.removeBucket(args))
+    future(client.removeBucket(args)).void
   }
 
   def statObject(key: S3Key): F[Boolean] = {
@@ -161,7 +162,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       .bucket(key.bucket)
       .`object`(key.objectName)
       .build()
-    Sync[F].blocking(client.statObject(args)).attempt.map(_.isRight)
+    future(client.statObject(args)).attempt.map(_.isRight)
   }
 
   def getObject(key: S3Key, range: ByteRange): F[GetObjectResponse] = {
@@ -175,7 +176,7 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       case ByteRange.Chunk(offset, length) =>
         aargs.offset(offset).length(length.toLong).build()
     }
-    Sync[F].blocking(client.getObject(args))
+    future(client.getObject(args))
   }
 
   def getObjectAsStream(key: S3Key, chunkSize: Int, range: ByteRange): Stream[F, Byte] = {
@@ -190,32 +191,37 @@ final private[minio] class Minio[F[_]: Sync](client: MinioClient) {
       detect: ContentTypeDetect,
       hint: Hint,
       chunkSize: Int
-  ): F[BinaryAttributes] =
-    Sync[F].blocking {
-      val args = GetObjectArgs
-        .builder()
-        .bucket(key.bucket)
-        .`object`(key.objectName)
-        .build()
+  ): F[BinaryAttributes] = {
+    val args = GetObjectArgs
+      .builder()
+      .bucket(key.bucket)
+      .`object`(key.objectName)
+      .build()
 
-      val md = MessageDigest.getInstance("SHA-256")
-      var len = 0L
-      var ct = None: Option[SimpleContentType]
-      val buf = new Array[Byte](chunkSize)
+    future(client.getObject(args)).flatMap(resp =>
+      Sync[F].blocking {
+        val md = MessageDigest.getInstance("SHA-256")
+        var len = 0L
+        var ct = None: Option[SimpleContentType]
+        val buf = new Array[Byte](chunkSize)
 
-      var read = -1
-      val in = client.getObject(args)
-      while ({ read = in.read(buf); read } > 0) {
-        md.update(buf, 0, read)
-        len = len + read
-        if (ct.isEmpty) {
-          ct = Some(detect.detect(ByteVector.view(buf, 0, read), hint))
+        var read = -1
+
+        while ({
+          read = resp.read(buf); read
+        } > 0) {
+          md.update(buf, 0, read)
+          len = len + read
+          if (ct.isEmpty) {
+            ct = Some(detect.detect(ByteVector.view(buf, 0, read), hint))
+          }
         }
+        BinaryAttributes(
+          ByteVector.view(md.digest()),
+          ct.getOrElse(SimpleContentType.octetStream),
+          len
+        )
       }
-      BinaryAttributes(
-        ByteVector.view(md.digest()),
-        ct.getOrElse(SimpleContentType.octetStream),
-        len
-      )
-    }
+    )
+  }
 }

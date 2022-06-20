@@ -5,7 +5,7 @@ import java.time.Duration
 import binny.BinaryAttributeStore
 import binny.util.Logger
 import cats.effect._
-import io.minio.MinioClient
+import io.minio.MinioAsyncClient
 import okhttp3.OkHttpClient
 
 object MinioTestCfg {
@@ -32,7 +32,7 @@ object MinioTestCfg {
       secretKey: String
   ): IO[Boolean] = {
     val minio = new Minio[IO](
-      MinioClient
+      MinioAsyncClient
         .builder()
         .httpClient(
           new OkHttpClient.Builder().connectTimeout(Duration.ofMillis(300)).build()
