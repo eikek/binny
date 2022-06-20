@@ -15,7 +15,10 @@ final case class MinioConfig(
     copy(detect = dt)
 
   def makeS3Key(id: BinaryId): S3Key =
-    S3Key(keyMapping.toBucket(id), id.id)
+    keyMapping.makeS3Key(id)
+
+  def withKeyMapping(km: S3KeyMapping): MinioConfig =
+    copy(keyMapping = km)
 
   override def toString: String =
     s"S3Config(endpoint=$endpoint, accessKey=$accessKey, secretKey=***)"

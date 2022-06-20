@@ -64,3 +64,19 @@ val run =
 
 run.compile.lastOrError.unsafeRunSync()
 ```
+
+## MinioChunkedBinaryStore
+
+The `MinioChunkedBinaryStore` implements `ChunkedBinaryStore` to allow
+uploading files in independent chunks. This is useful if chunks are
+received in random order and the whole file is not available as
+complete stream.
+
+For this the given `S3KeyMapping` is amended: the bucket is reused as
+is, but the object-name is appended with `/chunk_00001` so the user
+given objectname is turned into a folder and each chunk is stored
+beneath. For binaries that are provided as a complete stream, it
+stores just one chunk file - similar to what `MinioBinaryStore` does.
+
+When a file is requested, all required chunks are loaded sequentially
+and concatenated.

@@ -5,7 +5,7 @@ import binny._
 trait S3KeyMapping {
 
   /** A bucket name must be deduced from a binary-id. */
-  def toBucket(id: BinaryId): String
+  def makeS3Key(id: BinaryId): S3Key
 
   /** When listing objects, it must be known in which buckets to look. */
   def bucketFilter(bucket: String): Boolean
@@ -14,17 +14,17 @@ trait S3KeyMapping {
 object S3KeyMapping {
 
   def apply(
-      f: BinaryId => String,
+      f: BinaryId => S3Key,
       filter: String => Boolean
   ): S3KeyMapping =
     new S3KeyMapping {
-      def toBucket(id: BinaryId) = f(id)
+      def makeS3Key(id: BinaryId) = f(id)
       def bucketFilter(bucket: String) = filter(bucket)
     }
 
   /** Puts everything into a single bucket. */
   def constant(bucket: String): S3KeyMapping =
-    S3KeyMapping(_ => bucket, _ == bucket)
+    S3KeyMapping(id => S3Key.of(bucket, id), _ == bucket)
 
   /** Uses the id to generate buckets dynamically: Uses the first part of an id up to the
     * `delimiter` char and concatenates this to the `bucketPrefix`. If the id doesn't
@@ -42,10 +42,10 @@ object S3KeyMapping {
       id =>
         id.id.span(_ != delimiter) match {
           case (_, "") =>
-            bucketPrefix
+            S3Key.of(bucketPrefix, id)
           case (a, _) =>
-            if (a.isEmpty) bucketPrefix
-            else s"$bucketPrefix-$a"
+            if (a.isEmpty) S3Key.of(bucketPrefix, id)
+            else S3Key.of(s"$bucketPrefix-$a", id)
         },
       _.startsWith(bucketPrefix)
     )
