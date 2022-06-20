@@ -62,8 +62,10 @@ object BinaryAttributes {
       ct: Option[SimpleContentType]
   ) {
     def update(detect: ContentTypeDetect, hint: Hint)(c: Chunk[Byte]): State = {
-      md.update(c.toArraySlice.values)
-      new State(md, len + c.size, ct.orElse(Some(detect.detect(c.toByteVector, hint))))
+      val bytes = c.toArraySlice
+      val bv = ByteVector.view(bytes.values, bytes.offset, bytes.size)
+      md.update(bytes.values, bytes.offset, bytes.size)
+      new State(md, len + c.size, ct.orElse(Some(detect.detect(bv, hint))))
     }
 
     def update(detect: ContentTypeDetect, hint: Hint, c: Array[Byte]): State = {

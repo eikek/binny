@@ -86,7 +86,8 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
             .evalMap(chunk =>
               Sync[F]
                 .blocking {
-                  obj.write(chunk.toArraySlice.values)
+                  val bs = chunk.toArraySlice
+                  obj.write(bs.values, bs.offset, bs.size)
                   chunk.size
                 }
             )

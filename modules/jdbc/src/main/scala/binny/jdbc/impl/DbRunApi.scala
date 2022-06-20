@@ -152,7 +152,8 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
         ps.setString(1, id.id)
         ps.setInt(2, index)
         ps.setInt(3, bytes.size)
-        ps.setBinaryStream(4, new ByteArrayInputStream(bytes.toArraySlice.values))
+        val bs = bytes.toArraySlice
+        ps.setBinaryStream(4, new ByteArrayInputStream(bs.values, bs.offset, bs.size))
       }
 
   def insertAllData(
