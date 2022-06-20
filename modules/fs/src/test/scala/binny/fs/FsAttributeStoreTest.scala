@@ -1,5 +1,6 @@
 package binny.fs
 
+import binny._
 import binny.spec.BinaryAttributeStoreSpec
 import binny.util.Logger
 import cats.effect.IO
@@ -17,4 +18,20 @@ class FsAttributeStoreTest extends BinaryAttributeStoreSpec[FsAttributeStore[IO]
   )
 
   override def munitFixtures: Seq[Fixture[_]] = List(attrStore)
+
+  test("calculate sha256 from a file") {
+    for {
+      ca <- ExampleData.file2M
+        .through(BinaryAttributes.compute(ContentTypeDetect.probeFileType, Hint.none))
+        .compile
+        .lastOrError
+      hfs2 <- ExampleData.file2M
+        .through(fs2.hash.sha256)
+        .through(fs2.text.hex.encode)
+        .compile
+        .string
+      _ = assertEquals(hfs2, ExampleData.file2MAttr.sha256.toHex)
+      _ = assertEquals(ca.sha256.toHex, ExampleData.file2MAttr.sha256.toHex)
+    } yield ()
+  }
 }
