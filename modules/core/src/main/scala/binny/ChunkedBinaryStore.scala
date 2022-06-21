@@ -9,7 +9,8 @@ trait ChunkedBinaryStore[F[_]] extends BinaryStore[F] {
     * required to specify the total amount of chunks; thus the total length of the file
     * must be known up front.
     *
-    * The first chunk starts at index 0.
+    * The first chunk starts at index 0. Every chunk must be indexed consecutively (0, 1,
+    * 2, …).
     *
     * The maximum chunk size is constant and defined by the implementation. All chunks
     * must not exceed this length. If the complete file consists of multiple chunks, then

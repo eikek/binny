@@ -32,6 +32,9 @@ case class FsChunkedStoreConfig(
   def targetDir(id: BinaryId): Path =
     mapping.targetDir(baseDir, id)
 
+  def targetDirDepth =
+    targetDir(BinaryId("dummy")).relativize(baseDir).names.size
+
   def withMapping(dm: DirectoryMapping): FsChunkedStoreConfig =
     copy(mapping = dm)
 
