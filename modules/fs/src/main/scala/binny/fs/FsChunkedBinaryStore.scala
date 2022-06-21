@@ -2,12 +2,12 @@ package binny.fs
 
 import binny._
 import binny.util.RangeCalc.Offsets
-import binny.util.{Logger, RangeCalc}
+import binny.util.{Logger, RangeCalc, StreamUtil}
 import cats.data.OptionT
 import cats.effect._
 import cats.syntax.all._
 import fs2.io.file.{Files, Path}
-import fs2.{Chunk, Pipe, Stream}
+import fs2.{Chunk, Stream}
 import scodec.bits.ByteVector
 
 /** Stores binaries in chunks in the filesystem. When reading all available chunks are
@@ -147,9 +147,6 @@ class FsChunkedBinaryStore[F[_]: Async](
       .takeWhile(_._1)
       .map(_._2)
 
-  private def zipWithIndexFrom[A](n: Int): Pipe[F, A, (A, Long)] =
-    _.zipWithIndex.map(pt => (pt._1, pt._2 + n))
-
   private def listChunkFiles(id: BinaryId, offsets: Offsets) =
     if (offsets.isNone)
       Stream
@@ -163,7 +160,7 @@ class FsChunkedBinaryStore[F[_]: Async](
         .take(offsets.takeChunks)
         .map(n => makeFile(id, n))
         .through(takeWhileExists)
-        .through(zipWithIndexFrom(offsets.firstChunk))
+        .through(StreamUtil.zipWithIndexFrom(offsets.firstChunk))
 }
 
 object FsChunkedBinaryStore {

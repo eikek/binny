@@ -53,6 +53,15 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
       .drain
   }
 
+  test("load non existing id") {
+    val store = binStore()
+    for {
+      id <- BinaryId.random[IO]
+      file <- store.findBinary(id, ByteRange.All).value
+      _ = assertEquals(file, None)
+    } yield ()
+  }
+
   test("insert and load large file") {
     val store = binStore()
     (for {
