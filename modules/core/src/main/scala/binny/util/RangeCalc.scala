@@ -36,6 +36,9 @@ object RangeCalc {
   object Offsets {
     val none: Offsets =
       Offsets(0, Int.MaxValue, 0, 0)
+
+    def chunks(n: Int): Offsets = Offsets(0, n, 0, 0)
+    val oneChunk: Offsets = chunks(1)
   }
 
   /** Calculates the offsets to use when fetching only a `range` from a file. The given

@@ -71,10 +71,7 @@ final class MinioBinaryStore[F[_]: Async](
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val key = config.makeS3Key(id)
-    OptionT(minio.statObject(key).map {
-      case true  => Some(minio.getObjectAsStream(key, config.chunkSize, range))
-      case false => None
-    })
+    OptionT(minio.getObjectAsStreamOption(key, config.chunkSize, range))
   }
 
   def exists(id: BinaryId) = {

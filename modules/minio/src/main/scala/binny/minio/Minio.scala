@@ -11,6 +11,7 @@ import cats.effect._
 import cats.implicits._
 import fs2.{Chunk, Stream}
 import io.minio._
+import io.minio.errors.ErrorResponseException
 import scodec.bits.ByteVector
 
 final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
@@ -179,12 +180,40 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
     future(client.getObject(args))
   }
 
+  def getObjectOption(key: S3Key, range: ByteRange): F[Option[GetObjectResponse]] = {
+    val translateError: Throwable => F[Option[GetObjectResponse]] = {
+      case ex: ErrorResponseException if ex.response().code() == 404 =>
+        // note: this means either: no bucket, no object, or wrong api path
+        Option.empty[GetObjectResponse].pure[F]
+      case ex => Sync[F].raiseError(ex)
+    }
+
+    getObject(key, range).redeemWith(translateError, _.some.pure[F])
+  }
+
   def getObjectAsStream(key: S3Key, chunkSize: Int, range: ByteRange): Stream[F, Byte] = {
     val fin = getObject(key, range).map(a => a: InputStream)
     fs2.io
       .unsafeReadInputStream(fin, chunkSize, closeAfterUse = true)
       .mapChunks(c => Chunk.byteVector(c.toByteVector))
   }
+
+  def getObjectAsStreamOption(
+      key: S3Key,
+      chunkSize: Int,
+      range: ByteRange
+  ): F[Option[Stream[F, Byte]]] =
+    getObjectOption(key, range).map {
+      case Some(resp) =>
+        fs2.io
+          .unsafeReadInputStream(
+            Sync[F].pure(resp: InputStream),
+            chunkSize,
+            closeAfterUse = true
+          )
+          .some
+      case None => None
+    }
 
   def computeAttr(
       key: S3Key,

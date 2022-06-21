@@ -13,14 +13,14 @@ and can be self hosted. This module provides an implementation that is
 based on MinIOs [Java
 SDK](https://docs.min.io/docs/java-client-quickstart-guide.html).
 
-The SDK provides an easy to use, blocking http client. It is wrapped
-in a `Sync` and executed on the blocking pool.
+The SDK provides an easy to use asynchronous http client. It is
+wrapped in an `Async`.
 
 ## Usage
 
 To create such a store, you only need the endpoint url, the
 credentials (an access- and secret key) and a mapping from a
-`BinaryId` to a pair of values, `S3Key`. The MinIO store expects its
+`BinaryId` to a pair of values: `S3Key`. The MinIO store expects its
 key to have a bucket and a filekey (or object id). Since a `BinaryId`
 is just one value, the store must know how to create the two values,
 bucket name and object id - which are combined in a `S3Key`.

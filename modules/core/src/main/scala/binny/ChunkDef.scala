@@ -2,6 +2,9 @@ package binny
 
 import binny.ChunkDef.{Length, Total}
 
+/** A chunk is defined by its index and either the total amount of chunks, or the total
+  * length of the file.
+  */
 sealed trait ChunkDef {
   def fold[A](fa: Total => A, fb: Length => A): A
 }
