@@ -68,7 +68,12 @@ private[fs] object Impl {
     Files[F].deleteIfExists(targetFile)
 
   def deleteDir[F[_]: Async](dir: Path): F[Unit] =
-    Files[F].deleteRecursively(dir)
+    Files[F].exists(dir).flatMap {
+      case true =>
+        Files[F].deleteRecursively(dir)
+      case false =>
+        ().pure[F]
+    }
 
   def writeAttrs[F[_]: Async](file: Path, attrs: BinaryAttributes): F[Unit] =
     (Stream

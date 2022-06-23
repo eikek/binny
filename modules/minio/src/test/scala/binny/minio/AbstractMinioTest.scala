@@ -47,6 +47,7 @@ abstract class AbstractMinioTest[S <: BinaryStore[IO]]
         go.build()
       }))
       ct = getResp.headers().get("Content-Type")
+      _ <- IO(getResp.close())
       _ = assertEquals(ct, "image/png")
     } yield ()
   }

@@ -1,7 +1,7 @@
 package binny.minio
 
 import binny.ByteRange
-import cats.effect.IO
+import cats.effect._
 import com.dimafeng.testcontainers.munit.TestContainerForAll
 import io.minio.MinioAsyncClient
 import munit.CatsEffectSuite
@@ -22,15 +22,15 @@ class MinioTest extends CatsEffectSuite with TestContainerForAll {
         .credentials(cnt.accessKey, cnt.secretKey)
         .build()
       val minio = new Minio[IO](client)
+
       for {
         resp1 <- minio.getObjectOption(S3Key("test-bucket", "bla"), ByteRange.All)
         _ <- minio.makeBucketIfMissing("test-bucket")
         resp2 <- minio.getObjectOption(S3Key("test-bucket", "b"), ByteRange.All)
-        _ = {
-          assertEquals(resp1, None)
-          assertEquals(resp2, None)
-        }
-      } yield ()
+      } yield {
+        assertEquals(resp1, None)
+        assertEquals(resp2, None)
+      }
     }
   }
 }

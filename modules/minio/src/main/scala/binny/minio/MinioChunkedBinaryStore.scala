@@ -117,23 +117,31 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         } else {
           OptionT.pure(
             allChunks
-              .evalMap { case (s3Key, index) =>
+              .flatMap { case (s3Key, index) =>
                 RangeCalc.chopOffsets(offsets, index.toInt) match {
                   case (Some(start), Some(end)) =>
                     val br = ByteRange.Chunk(start, start + end)
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
 
                   case (Some(start), None) =>
                     val br = ByteRange.Chunk(start, Int.MaxValue)
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
 
                   case (None, Some(end)) =>
                     val br = ByteRange.Chunk(0, end)
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
 
                   case (None, None) =>
                     val br = ByteRange.All
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
                 }
               }
               .unNoneTerminate
@@ -145,7 +153,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
 
   def exists(id: BinaryId): F[Boolean] = {
     val key = keyMapping.makeS3Key(id)
-    minio.statObject(key).attempt.map(_.isRight)
+    minio.exists(key)
   }
 
   def delete(id: BinaryId): F[Unit] = {
@@ -182,8 +190,10 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         .through(StreamUtil.zipWithIndexFrom(offsets.firstChunk))
 
   private def loadChunkFiles: Pipe[F, S3Key, Byte] =
-    _.evalMap(s3Key =>
-      minio.getObjectAsStreamOption(s3Key, config.chunkSize, ByteRange.All)
+    _.flatMap(s3Key =>
+      Stream.eval(
+        minio.getObjectAsStreamOption(s3Key, config.chunkSize, ByteRange.All)
+      )
     ).unNoneTerminate.flatten
 
   private def objectName(key: String, n: Int): String = f"$key/chunk_$n%08d"

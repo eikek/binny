@@ -102,6 +102,7 @@ trait BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite with StreamA
       id <- ExampleData.helloWorld[IO].through(store.insert)
       _ <- Stream.eval(store.findBinary(id, ByteRange.All).getOrElse(noFileError))
       _ <- Stream.eval(store.delete(id))
+      _ <- Stream.eval(store.delete(BinaryId("non-existing")))
       res <- Stream.eval(store.findBinary(id, ByteRange.All).value)
       _ = assertEquals(res, None)
     } yield ()).compile.drain
@@ -167,7 +168,6 @@ trait BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite with StreamA
       )
       attrNoSha <- store.computeAttr(id, hintTxt).run(AttributeName.excludeSha256).value
       attrCt <- store.computeAttr(id, hintTxt).run(AttributeName.contentTypeOnly).value
-      _ <- IO.println(s"Attr took: ${Stopwatch.humanTime(attrAll._1)}")
       _ = {
         assertEquals(
           attrCt.get.contentType,

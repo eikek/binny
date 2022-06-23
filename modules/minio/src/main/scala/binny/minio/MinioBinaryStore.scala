@@ -48,11 +48,9 @@ final class MinioBinaryStore[F[_]: Async](
             _ <- minio.uploadObject(key, config.partSize, config.detect, inStream)
           } yield ()
 
-        for {
-          _ <- Stopwatch.wrap(d => logger.trace(s"Upload took: $d")) {
-            upload.compile.drain
-          }
-        } yield ()
+        Stopwatch.wrap(d => logger.trace(s"Upload took: $d")) {
+          upload.compile.drain
+        }
       }.drain
 
   def delete(id: BinaryId): F[Unit] = {
@@ -62,7 +60,12 @@ final class MinioBinaryStore[F[_]: Async](
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val key = config.makeS3Key(id)
-    OptionT(minio.getObjectAsStreamOption(key, config.chunkSize, range))
+    OptionT(minio.exists(key).map {
+      case true =>
+        minio.getObjectAsStream(key, config.chunkSize, range).some
+      case false =>
+        None
+    })
   }
 
   def computeAttr(id: BinaryId, hint: Hint) = Kleisli { select =>
@@ -88,7 +91,7 @@ final class MinioBinaryStore[F[_]: Async](
 
   def exists(id: BinaryId) = {
     val key = config.makeS3Key(id)
-    minio.statObject(key).attempt.map(_.isRight)
+    minio.exists(key)
   }
 }
 

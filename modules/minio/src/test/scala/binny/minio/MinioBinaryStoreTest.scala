@@ -7,6 +7,10 @@ class MinioBinaryStoreTest
     extends AbstractMinioTest[MinioBinaryStore[IO]]
     with BinaryStoreSpec[MinioBinaryStore[IO]] {
 
+  java.util.logging.Logger
+    .getLogger(classOf[okhttp3.OkHttpClient].getName)
+    .setLevel(java.util.logging.Level.FINE);
+
   override val containerDef: MinioContainer.Def = new MinioContainer.Def
 
   // As soon as two test classes use the minio container, things get scary

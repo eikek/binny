@@ -6,7 +6,7 @@ import binny.util.{Logger, RangeCalc, StreamUtil}
 import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.syntax.all._
-import fs2.io.file.{Files, Path}
+import fs2.io.file.{Files, Flags, Path}
 import fs2.{Chunk, Stream}
 import scodec.bits.ByteVector
 
@@ -47,11 +47,11 @@ class FsChunkedBinaryStore[F[_]: Async](
           )
 
         for {
-          _ <- logger.trace(
-            s"Insert chunk ${ch.index + 1}/${ch.total} of size ${data.length}"
-          )
           _ <- insert
           r <- checkComplete
+          _ <- logger.trace(
+            s"Inserted chunk ${ch.index + 1}/${ch.total} of size ${data.length}"
+          )
         } yield r
     }
 
@@ -63,7 +63,7 @@ class FsChunkedBinaryStore[F[_]: Async](
         case AttributeName.ContainsSha256(_) =>
           listChunkFiles(id, Offsets.none)
             .map(_._1)
-            .flatMap(p => Files[F].readAll(p))
+            .flatMap(p => Files[F].readAll(p, cfg.readChunkSize, Flags.Read))
             .through(ComputeAttr.computeAll(cfg.detect, hint))
             .compile
             .lastOrError
@@ -95,7 +95,9 @@ class FsChunkedBinaryStore[F[_]: Async](
         val offsets = RangeCalc.calcOffset(range, cfg.chunkSize)
         val allChunks = listChunkFiles(id, offsets)
         if (offsets.isNone) {
-          val contents = allChunks.map(_._1).flatMap(p => Files[F].readAll(p))
+          val contents = allChunks
+            .map(_._1)
+            .flatMap(p => Files[F].readAll(p, cfg.readChunkSize, Flags.Read))
           OptionT.pure(contents)
         } else {
           OptionT.pure(
@@ -120,7 +122,7 @@ class FsChunkedBinaryStore[F[_]: Async](
                   case (None, Some(end)) =>
                     Files[F].readRange(chunkFile, cfg.readChunkSize, 0, end.toLong)
                   case (None, None) =>
-                    Files[F].readAll(chunkFile)
+                    Files[F].readAll(chunkFile, cfg.readChunkSize, Flags.Read)
                 }
               }
           )
