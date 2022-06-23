@@ -32,9 +32,9 @@ mapping. Here we use a constant bucket name _docs-bucket_.
 
 ```scala mdoc
 import binny._
-import binny.Binary.Implicits._
 import binny.minio._
 import binny.util.Logger
+import ExampleData._
 import fs2.Stream
 import cats.effect.IO
 import cats.effect.unsafe.implicits._
@@ -50,10 +50,10 @@ val run =
     config: MinioConfig = minio.createConfig(S3KeyMapping.constant("docs-bucket"))
 
     // Create the `BinaryStore`
-    store = MinioBinaryStore[IO](config, BinaryAttributeStore.empty[IO], logger)
+    store = MinioBinaryStore[IO](config, logger)
 
     // insert some data
-    id <- someData.through(store.insert(Hint.none))
+    id <- someData.through(store.insert)
 
     // get the file out
     bin <- Stream.eval(

@@ -41,7 +41,7 @@ easy to start one locally, for example with docker.
 ```scala mdoc
 import binny._
 import binny.util.Logger
-import binny.Binary.Implicits._
+import binny.ExampleData._
 import binny.jdbc.ConnectionConfig
 import binny.pglo._
 import fs2.Stream
@@ -64,7 +64,7 @@ val run =
     _ <- Stream.eval(PgSetup.run[IO](store.config.table, logger, ds))
 
     // insert some data
-    id <- someData.through(store.insert(Hint.none))
+    id <- someData.through(store.insert)
 
     // get the file out
     bin <- Stream.eval(

@@ -22,9 +22,8 @@ Byte]`. The `BinaryAttributes` holds some attributes for a binary, the
 length, content type and sha256 hash.
 
 The `BinaryStore[F]` is the main entry point and defines
-storing/retrieving `Binary[F]`. Then this can be combined with a
-`BinaryAttributesStore` which does the same for `BinaryAttributes`
-objects.
+storing/retrieving `Binary[F]`. `BinaryAttributes` can be computed for
+any `Binary[F]`, but a `BinaryStore` can provide a more efficient way.
 
 
 ## Utilities

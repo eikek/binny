@@ -12,13 +12,12 @@ a `BinaryStore`.
 
 ## Usage
 
-You need a `FsStoreConfig` object and a `BinaryAttributeStore` to
-create an instance of the `FsBinaryStore`. The companion object has
-some convenience constructors.
+You need a `FsStoreConfig` object to create an instance of the
+`FsBinaryStore`. The companion object has some convenience
+constructors.
 
 The `FsBinaryStore.default` creates a store that saves files in a
-subdirectory hierarchy and stores the attributes in another file,
-next to the file containing the data.
+subdirectory hierarchy.
 
 ```scala mdoc
 import binny._
@@ -36,8 +35,8 @@ val run =
   for {
     baseDir <- Stream.resource(DocUtil.tempDir)
     store = FsBinaryStore.default(logger, baseDir)
-    id1 <- someData.through(store.insert(Hint.none))
-    id2 <- someData.through(store.insert(Hint.none))
+    id1 <- someData.through(store.insert)
+    id2 <- someData.through(store.insert)
     layout <- Stream.eval(DocUtil.directoryContentAsString(baseDir))
   } yield (id1, id2, layout)
 
@@ -46,20 +45,15 @@ run.compile.lastOrError.unsafeRunSync()
 
 This store uses the id to create a directory using the first two
 characters and another below using the complete id. Then the data is
-stored in `file` and its attributes in `attr`. The store also uses the
-`FsBinaryAttributeStore` to store the attributes in the file system.
-This has been configured by the same strategy to have both files next
-to each other.
+stored in `file` and its attributes in `attr`.
 
-This can be changed by providing a different `FsStoreConfig` and
-`FsAttrConfig`, respectively. Of course, a different implementation of
-`BinaryAttributeStore` can be used as well. The mapping of an `id` to
-a file in the filesystem is given by a `PathMapping`. There are some
-provided, the above results are from `PathMapping.subdir2`.
+This can be changed by providing a different `FsStoreConfig`. The
+mapping of an `id` to a file in the filesystem is given by a
+`PathMapping`. There are some provided, the above results are from
+`PathMapping.subdir2`.
 
-As another example, the next `FsBinaryStore` won't store any
-attributes and puts the files directly into the `baseDir` - using the
-id as its name.
+As another example, the next `FsBinaryStore` puts the files directly
+into the `baseDir` - using the id as its name.
 
 ```scala mdoc
 
@@ -67,11 +61,10 @@ val run2 =
   Stream.resource(DocUtil.tempDir).flatMap { baseDir =>
     val store = FsBinaryStore[IO](
       FsStoreConfig.default(baseDir).withMapping(PathMapping.simple),
-      logger,
-      BinaryAttributeStore.empty[IO]
+      logger
     )
-    someData.through(store.insertWith(BinaryId("hello-world.txt"), Hint.none)) ++
-      someData.through(store.insertWith(BinaryId("hello_world.txt"), Hint.none)) ++
+    someData.through(store.insertWith(BinaryId("hello-world.txt"))) ++
+      someData.through(store.insertWith(BinaryId("hello_world.txt"))) ++
       Stream.eval(DocUtil.directoryContentAsString(baseDir))
   }
 
