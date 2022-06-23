@@ -12,7 +12,7 @@ abstract class ChunkedBinaryStoreSpec[S <: ChunkedBinaryStore[IO]]
       .findBinary(id, ByteRange.All)
       .semiflatMap(
         _.through(
-          BinaryAttributes.compute(ContentTypeDetect.probeFileType, Hint.none)
+          ComputeAttr.computeAll(ContentTypeDetect.probeFileType, Hint.none)
         ).compile.lastOrError
       )
 

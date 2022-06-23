@@ -71,7 +71,7 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
 
   def exists(id: BinaryId): DbRun[OptionT[F, *], Unit] =
     DbRun
-      .query[F](s"""SELECT file_id "$table" WHERE "file_id" = ? LIMIT ?""") { stmt =>
+      .query[F](s"""SELECT file_id FROM "$table" WHERE "file_id" = ? LIMIT ?""") { stmt =>
         stmt.setString(1, id.id)
         stmt.setInt(2, 1)
       }
@@ -151,6 +151,27 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
         }
       )
     } yield attr
+
+  def computeLength(id: BinaryId): DbRun[F, Long] =
+    for {
+      lom <- loManager
+      oid <- findOid(id)
+      attr <- openLORead(lom, oid.getOrElse(-1)).use(obj =>
+        Sync[F].blocking {
+          obj.size64()
+        }
+      )
+    } yield attr
+
+  def detectContentType(
+      id: BinaryId,
+      detect: ContentTypeDetect,
+      hint: Hint
+  ): DbRun[F, SimpleContentType] =
+    for {
+      chunk <- loadChunk(id, ByteRange.Chunk(0, 50))
+      ct = detect.detect(chunk.toByteVector, hint)
+    } yield ct
 
   def loadChunkByOID(oid: Long, range: ByteRange.Chunk): DbRun[F, Chunk[Byte]] = {
     def readChunk(obj: LargeObject): F[Chunk[Byte]] =

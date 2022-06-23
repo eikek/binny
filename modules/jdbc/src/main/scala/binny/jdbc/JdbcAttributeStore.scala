@@ -22,7 +22,7 @@ final class JdbcAttributeStore[F[_]: Sync](
   def runSetup(dbms: Dbms): F[Int] =
     DatabaseSetup.runAttr[F](dbms, ds, config.table)
 
-  def saveAttr(id: BinaryId, attrs: F[BinaryAttributes]): F[Unit] = {
+  def saveAttr(id: BinaryId, attrs: ComputeAttr[F]): F[Unit] = {
     def store(a: BinaryAttributes): F[Unit] =
       (for {
         insertRes <- dbApi.insertAttr(id, a).attempt
@@ -33,7 +33,7 @@ final class JdbcAttributeStore[F[_]: Sync](
             DbRun.pure[F, Int](n)
         }
       } yield ()).execute(ds)
-    attrs.flatMap(store)
+    attrs.run(AttributeName.all).semiflatMap(store).value.void
   }
 
   def deleteAttr(id: BinaryId): F[Boolean] =

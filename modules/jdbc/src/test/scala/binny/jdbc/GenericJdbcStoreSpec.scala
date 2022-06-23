@@ -2,8 +2,8 @@ package binny.jdbc
 
 import javax.sql.DataSource
 
-import binny.Binary.Implicits._
 import binny._
+import binny.ExampleData._
 import binny.jdbc.impl.DbRunApi
 import binny.jdbc.impl.Implicits._
 import binny.spec.BinaryStoreSpec
@@ -97,7 +97,10 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
       }
       _ = assertEquals(res.last, InsertChunkResult.Complete)
       _ = assertEquals(res.init.toSet, Set(InsertChunkResult.incomplete))
-      attrs <- store.computeAttr(id, Hint.none).getOrElse(sys.error("not found"))
+      attrs <- store
+        .computeAttr(id, Hint.none)
+        .run(AttributeName.all)
+        .getOrElse(sys.error("not found"))
       _ = assertEquals(attrs, ExampleData.file2MAttr)
     } yield ()
   }
@@ -127,7 +130,10 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
     for {
       id <- BinaryId.random[IO]
       res <- insertConcurrent(id).compile.toVector
-      attrs <- store.computeAttr(id, Hint.none).getOrElse(sys.error("not found"))
+      attrs <- store
+        .computeAttr(id, Hint.none)
+        .run(AttributeName.all)
+        .getOrElse(sys.error("not found"))
       _ = assertEquals(attrs, ExampleData.file2MAttr)
       _ = assertEquals(
         res.filter(_ == InsertChunkResult.Complete).toSet,

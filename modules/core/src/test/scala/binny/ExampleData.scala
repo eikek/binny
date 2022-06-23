@@ -1,6 +1,5 @@
 package binny
 
-import binny.Binary.Implicits._
 import cats.effect._
 import fs2.Stream
 import scodec.bits.ByteVector
@@ -42,4 +41,13 @@ object ExampleData {
 
   private def binaryFail: Binary[IO] =
     Stream.eval(IO(sys.error("error!!")))
+
+  implicit class StreamExtras(self: Stream[IO, Byte]) {
+    def computeAttributes(detect: ContentTypeDetect, hint: Hint) =
+      self.through(ComputeAttr.computeAll(detect, hint))
+
+    def readUtf8String =
+      self.through(fs2.text.utf8.decode).compile.string
+
+  }
 }

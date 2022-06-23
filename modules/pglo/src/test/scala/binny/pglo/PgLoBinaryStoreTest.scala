@@ -14,7 +14,7 @@ class PgLoBinaryStoreTest
   val config = PgLoConfig.default.copy(chunkSize = 210 * 1024)
 
   val containerDef: PostgreSQLContainer.Def =
-    PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))
+    PostgreSQLContainer.Def(DockerImageName.parse("postgres:14"))
 
   val binStore: Fixture[PgLoBinaryStore[IO]] =
     ResourceSuiteLocalFixture(

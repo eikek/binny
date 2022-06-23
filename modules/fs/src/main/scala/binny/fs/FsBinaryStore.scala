@@ -2,7 +2,7 @@ package binny.fs
 
 import binny._
 import binny.util.{Logger, Stopwatch}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.Pipe
@@ -25,16 +25,9 @@ final class FsBinaryStore[F[_]: Async](
       {
         val target = config.targetFile(id)
 
-        // tried with .observe to consume the stream once, but it took 5x longer
-        val attr = Files[F]
-          .readAll(target)
-          .through(BinaryAttributes.compute(config.detect, hint))
-          .compile
-          .lastOrError
-
         val storeFile =
           bytes.through(Impl.write[F](target, config.overwriteMode)) ++ Stream.eval(
-            attrStore.saveAttr(id, attr)
+            attrStore.saveAttr(id, computeAttr(id, hint))
           )
 
         for {
@@ -46,6 +39,28 @@ final class FsBinaryStore[F[_]: Async](
           )
         } yield ()
       }.drain
+
+  def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
+    Kleisli { select =>
+      val file = config.targetFile(id)
+      OptionT.liftF(Files[F].exists(file)).filter(identity).as(select).semiflatMap {
+        case AttributeName.ContainsSha256(_) =>
+          Files[F]
+            .readAll(config.targetFile(id))
+            .through(ComputeAttr.computeAll(config.detect, hint))
+            .compile
+            .lastOrError
+
+        case AttributeName.ContainsLength(_) =>
+          val length = Files[F].size(file)
+          val ct = Impl.detectContentType(file, config.detect, hint)
+          (ct, length).mapN(BinaryAttributes.apply)
+
+        case _ =>
+          val ct = Impl.detectContentType(file, config.detect, hint)
+          ct.map(ctype => BinaryAttributes.empty.copy(contentType = ctype))
+      }
+    }
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val target = config.targetFile(id)

@@ -1,14 +1,13 @@
 package binny.pglo
 
 import javax.sql.DataSource
-
 import binny._
 import binny.jdbc.JdbcBinaryStore
 import binny.jdbc.impl.DataSourceResource
 import binny.jdbc.impl.Implicits._
 import binny.pglo.impl.PgApi
 import binny.util.{Logger, RangeCalc, Stopwatch}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.{Pipe, Stream}
@@ -41,7 +40,9 @@ final class PgLoBinaryStore[F[_]: Sync](
           ) {
             attrStore.saveAttr(
               id,
-              pg.computeAttr(id, config.detect, hint, config.chunkSize).execute(ds)
+              ComputeAttr.liftF(
+                pg.computeAttr(id, config.detect, hint, config.chunkSize).execute(ds)
+              )
             )
           }
           _ <- Stopwatch.show(insertTime)(d =>
@@ -97,15 +98,35 @@ final class PgLoBinaryStore[F[_]: Sync](
       .flatMap(data.run)
   }
 
-  def computeAttr(id: BinaryId, hint: Hint): OptionT[F, BinaryAttributes] = {
+  def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] = Kleisli { select =>
     val attr =
-      pg
-        .exists(id)
-        .flatMap(_ =>
+      select match {
+        case AttributeName.ContainsSha256(_) =>
           pg
-            .computeAttr(id, config.detect, hint, config.chunkSize)
-            .mapF(OptionT.liftF[F, BinaryAttributes])
-        )
+            .exists(id)
+            .flatMap(_ =>
+              pg
+                .computeAttr(id, config.detect, hint, config.chunkSize)
+                .mapF(OptionT.liftF[F, BinaryAttributes])
+            )
+        case AttributeName.ContainsLength(_) =>
+          pg.exists(id)
+            .flatMap(_ =>
+              pg.computeLength(id)
+                .flatMap(len =>
+                  pg.detectContentType(id, config.detect, hint)
+                    .map(ct => BinaryAttributes(ct, len))
+                )
+                .mapF(OptionT.liftF[F, BinaryAttributes])
+            )
+        case _ =>
+          pg.exists(id)
+            .flatMap(_ =>
+              pg.detectContentType(id, config.detect, hint)
+                .map(ct => BinaryAttributes(ct, -1L))
+                .mapF(OptionT.liftF[F, BinaryAttributes])
+            )
+      }
 
     for {
       w <- OptionT.liftF(Stopwatch.start[F])

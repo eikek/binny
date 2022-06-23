@@ -1,13 +1,15 @@
 package binny
 
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.{Chunk, Pipe, Stream}
 import scodec.bits.ByteVector
 
-class MemoryBinaryStore[F[_]: Sync](data: Ref[F, Map[BinaryId, ByteVector]])
-    extends BinaryStore[F] {
+class MemoryBinaryStore[F[_]: Sync](
+    data: Ref[F, Map[BinaryId, ByteVector]],
+    detect: ContentTypeDetect = ContentTypeDetect.probeFileType
+) extends BinaryStore[F] {
 
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] = {
     val all = Stream.eval(data.get).flatMap(m => Stream.emits(m.keySet.toList))
@@ -43,6 +45,17 @@ class MemoryBinaryStore[F[_]: Sync](data: Ref[F, Map[BinaryId, ByteVector]])
 
   def delete(id: BinaryId): F[Unit] =
     data.update(_.removed(id))
+
+  def computeAttr(id: BinaryId, hint: Hint) = Kleisli { _ =>
+    OptionT(data.get.map(_.get(id)))
+      .map(bv =>
+        BinaryAttributes(
+          sha256 = bv.sha256,
+          contentType = detect.detect(bv, hint),
+          length = bv.length
+        )
+      )
+  }
 }
 
 object MemoryBinaryStore {

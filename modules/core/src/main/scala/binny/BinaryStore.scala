@@ -1,6 +1,6 @@
 package binny
 
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect.Sync
 import cats.implicits._
 import fs2.{Pipe, Stream}
@@ -28,6 +28,11 @@ trait BinaryStore[F[_]] {
 
   /** Deletes all data associated to the given id. */
   def delete(id: BinaryId): F[Unit]
+
+  /** Retrieves a selected set of attributes of a binary. If the binary is not found,
+    * `BinaryAttributes.empty` is returned.
+    */
+  def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F]
 }
 
 object BinaryStore {
@@ -49,5 +54,8 @@ object BinaryStore {
 
       def delete(id: BinaryId): F[Unit] =
         ().pure[F]
+
+      def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
+        Kleisli(_ => OptionT.none[F, BinaryAttributes])
     }
 }

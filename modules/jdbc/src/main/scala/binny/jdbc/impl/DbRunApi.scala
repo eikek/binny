@@ -260,7 +260,7 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
       )
   }
 
-  def computeAttr(
+  def computeAttrAll(
       id: BinaryId,
       detect: ContentTypeDetect,
       hint: Hint
@@ -291,6 +291,42 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
         }
       }
     }.inTX // necessary so that setFetchSize is effective
+
+  def computeAttrLen(
+      id: BinaryId
+  ): DbRun[F, Long] =
+    DbRun.delay { conn =>
+      val sql = s"SELECT sum(length(chunk_data)) FROM $table WHERE file_id = ?"
+      Using.resource(conn.prepareStatement(sql)) { ps =>
+        ps.setString(1, id.id)
+        Using.resource(ps.executeQuery()) { rs =>
+          if (rs.next()) rs.getLong(1) else -1L
+        }
+      }
+    }
+
+  def computeAttrDetect(
+      id: BinaryId,
+      detect: ContentTypeDetect,
+      hint: Hint
+  ): DbRun[F, SimpleContentType] =
+    DbRun.delay { conn =>
+      val sql = s"SELECT chunk_data FROM $table WHERE file_id = ? and chunk_nr = 0"
+      Using.resource(conn.prepareStatement(sql)) { ps =>
+        ps.setString(1, id.id)
+        Using.resource(ps.executeQuery()) { rs =>
+          var ct = None: Option[SimpleContentType]
+          rs.setFetchSize(1)
+          if (rs.next()) {
+            val data = rs.getBytes(1)
+            if (ct.isEmpty) {
+              ct = Some(detect.detect(ByteVector.view(data), hint))
+            }
+          }
+          ct.getOrElse(SimpleContentType.octetStream)
+        }
+      }
+    }
 
   def queryAttr(id: BinaryId): DbRun[F, Option[BinaryAttributes]] =
     DbRun

@@ -1,13 +1,11 @@
 package binny
 
 import java.io.{ByteArrayOutputStream, StringReader}
-import java.security.MessageDigest
 import java.util.Properties
-
 import scala.util.Try
-
-import fs2.{Chunk, Pipe, Stream}
 import scodec.bits.ByteVector
+
+import java.nio.charset.StandardCharsets
 
 /** Basic attributes of binary data. */
 final case class BinaryAttributes(
@@ -18,7 +16,10 @@ final case class BinaryAttributes(
 
 object BinaryAttributes {
   val empty: BinaryAttributes =
-    BinaryAttributes(ByteVector.empty, SimpleContentType.octetStream, 0L)
+    BinaryAttributes(ByteVector.empty, SimpleContentType.octetStream, -1L)
+
+  def apply(contentType: SimpleContentType, length: Long): BinaryAttributes =
+    BinaryAttributes(ByteVector.empty, contentType, length)
 
   def asString(ba: BinaryAttributes): String = {
     val props = new Properties()
@@ -27,7 +28,7 @@ object BinaryAttributes {
     props.setProperty("length", ba.length.toString)
     val baos = new ByteArrayOutputStream()
     props.store(baos, "binary attributes")
-    baos.toString("ISO-8859-1")
+    baos.toString(StandardCharsets.UTF_8)
   }
 
   def fromString(str: String): Either[String, BinaryAttributes] = {
@@ -49,42 +50,4 @@ object BinaryAttributes {
 
   def unsafeFromString(str: String): BinaryAttributes =
     fromString(str).fold(sys.error, identity)
-
-  def compute[F[_]](ct: ContentTypeDetect, hint: Hint): Pipe[F, Byte, BinaryAttributes] =
-    in =>
-      Stream.suspend {
-        in.chunks.fold(State.empty)(_.update(ct, hint)(_)).map(_.toAttributes)
-      }
-
-  final private[binny] class State(
-      md: MessageDigest,
-      len: Long,
-      ct: Option[SimpleContentType]
-  ) {
-    def update(detect: ContentTypeDetect, hint: Hint)(c: Chunk[Byte]): State = {
-      val bytes = c.toArraySlice
-      val bv = ByteVector.view(bytes.values, bytes.offset, bytes.size)
-      md.update(bytes.values, bytes.offset, bytes.size)
-      new State(md, len + c.size, ct.orElse(Some(detect.detect(bv, hint))))
-    }
-
-    def update(detect: ContentTypeDetect, hint: Hint, c: Array[Byte]): State = {
-      md.update(c)
-      new State(
-        md,
-        len + c.length,
-        ct.orElse(Some(detect.detect(ByteVector.view(c), hint)))
-      )
-    }
-
-    def toAttributes: BinaryAttributes =
-      BinaryAttributes(
-        ByteVector.view(md.digest()),
-        ct.getOrElse(SimpleContentType.octetStream),
-        len
-      )
-  }
-  private[binny] object State {
-    def empty = new State(MessageDigest.getInstance("SHA-256"), 0, None)
-  }
 }

@@ -1,10 +1,9 @@
 package binny.minio
 
 import java.io.BufferedInputStream
-
 import binny._
 import binny.util.{Logger, Stopwatch}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.{Pipe, Stream}
@@ -53,14 +52,6 @@ final class MinioBinaryStore[F[_]: Async](
           _ <- Stopwatch.wrap(d => logger.trace(s"Upload took: $d")) {
             upload.compile.drain
           }
-          _ <- Stopwatch.wrap(d =>
-            logger.trace(s"Computing and storing attributes took: $d")
-          ) {
-            attrStore.saveAttr(
-              id,
-              minio.computeAttr(key, config.detect, hint, config.chunkSize)
-            )
-          }
         } yield ()
       }.drain
 
@@ -74,9 +65,30 @@ final class MinioBinaryStore[F[_]: Async](
     OptionT(minio.getObjectAsStreamOption(key, config.chunkSize, range))
   }
 
+  def computeAttr(id: BinaryId, hint: Hint) = Kleisli { select =>
+    val key = config.makeS3Key(id)
+    OptionT(minio.statObject(key).attempt.map(_.toOption)).semiflatMap { stat =>
+      select match {
+        case AttributeName.ContainsSha256(_) =>
+          minio.computeAttr(key, config.detect, hint, config.chunkSize)
+
+        case AttributeName.ContainsLength(_) =>
+          val len = stat.size()
+          minio
+            .detectContentType(key, stat.some, config.detect, hint)
+            .map(c => BinaryAttributes(c, len))
+
+        case _ =>
+          minio
+            .detectContentType(key, stat.some, config.detect, hint)
+            .map(c => BinaryAttributes(c, -1L))
+      }
+    }
+  }
+
   def exists(id: BinaryId) = {
     val key = config.makeS3Key(id)
-    minio.statObject(key)
+    minio.statObject(key).attempt.map(_.isRight)
   }
 
   def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =

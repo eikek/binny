@@ -16,7 +16,7 @@ abstract class BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]]
       id <- BinaryId.random[IO]
       none <- store.findAttr(id).value
       _ = assert(none.isEmpty)
-      _ <- store.saveAttr(id, IO(attr))
+      _ <- store.saveAttr(id, ComputeAttr.pure(attr))
       a <- store.findAttr(id).value
       _ = assertEquals(a, Some(attr))
 
@@ -28,7 +28,7 @@ abstract class BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]]
     for {
       attr <- ExampleData.helloWorldAttr
       id <- BinaryId.random[IO]
-      _ <- store.saveAttr(id, IO(attr))
+      _ <- store.saveAttr(id, ComputeAttr.pure(attr))
       a <- store.findAttr(id).value
       _ = assertEquals(a, Some(attr))
       _ <- store.deleteAttr(id)
@@ -42,9 +42,9 @@ abstract class BinaryAttributeStoreSpec[S <: BinaryAttributeStore[IO]]
     for {
       attr <- ExampleData.helloWorldAttr
       id <- BinaryId.random[IO]
-      _ <- store.saveAttr(id, IO(attr))
+      _ <- store.saveAttr(id, ComputeAttr.pure(attr))
       attr2 = attr.copy(contentType = SimpleContentType("application/json"))
-      _ <- store.saveAttr(id, IO(attr2))
+      _ <- store.saveAttr(id, ComputeAttr.pure(attr2))
       a <- store.findAttr(id).value
       _ = assertEquals(a, Some(attr2))
     } yield ()

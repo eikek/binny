@@ -23,6 +23,8 @@ final class SwapFind[F[_]](delegate: JdbcBinaryStore[F]) extends BinaryStore[F] 
 
   def listIds(prefix: Option[String], chunkSize: Int) =
     delegate.listIds(prefix, chunkSize)
+
+  def computeAttr(id: BinaryId, hint: Hint) = delegate.computeAttr(id, hint)
 }
 
 object SwapFind {

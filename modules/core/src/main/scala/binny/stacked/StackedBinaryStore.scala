@@ -52,6 +52,9 @@ final class StackedBinaryStore[F[_]: Async] private (
   def delete(id: BinaryId): F[Unit] =
     main.delete(id) *> withRemaining(s => Stream.eval(s.delete(id))).compile.drain
 
+  def computeAttr(id: BinaryId, hint: Hint) =
+    main.computeAttr(id, hint)
+
   def copyMainToRest(fromMeta: BinaryAttributeStore[F]): F[List[CopyTool.Counter]] = {
     val maxConcurrent = math.max(Runtime.getRuntime.availableProcessors() * 1.5, 4)
     def copyTo(to: BinaryStore[F]) =

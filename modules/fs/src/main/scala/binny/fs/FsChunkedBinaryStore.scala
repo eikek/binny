@@ -3,7 +3,7 @@ package binny.fs
 import binny._
 import binny.util.RangeCalc.Offsets
 import binny.util.{Logger, RangeCalc, StreamUtil}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.syntax.all._
 import fs2.io.file.{Files, Path}
@@ -60,14 +60,32 @@ class FsChunkedBinaryStore[F[_]: Async](
         } yield r
     }
 
-  def computeAttr(id: BinaryId, hint: Hint): F[BinaryAttributes] =
-    listChunkFiles(id, Offsets.none)
-      .map(_._1)
-      .evalMap(Impl.loadAll[F])
-      .fold(BinaryAttributes.State.empty)(_.update(cfg.detect, hint, _))
-      .map(_.toAttributes)
-      .compile
-      .lastOrError
+  def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
+    Kleisli { select =>
+      val chunk0 = makeFile(id, 0)
+      val ct = Impl.detectContentType(chunk0, cfg.detect, hint)
+      OptionT.liftF(exists(id)).filter(identity).as(select).semiflatMap {
+        case AttributeName.ContainsSha256(_) =>
+          listChunkFiles(id, Offsets.none)
+            .map(_._1)
+            .flatMap(p => Files[F].readAll(p))
+            .through(ComputeAttr.computeAll(cfg.detect, hint))
+            .compile
+            .lastOrError
+
+        case AttributeName.ContainsLength(_) =>
+          val len = listChunkFiles(id, Offsets.none)
+            .map(_._1)
+            .evalMap(Files[F].size)
+            .compile
+            .fold(0L)(_ + _)
+
+          (ct, len).mapN(BinaryAttributes.apply)
+
+        case _ =>
+          ct.map(c => BinaryAttributes.empty.copy(contentType = c))
+      }
+    }
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val listing = listChunkFiles(id, Offsets.chunks(2)).take(2).compile.toList

@@ -157,13 +157,13 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
     future(client.removeBucket(args)).void
   }
 
-  def statObject(key: S3Key): F[Boolean] = {
+  def statObject(key: S3Key): F[StatObjectResponse] = {
     val args = StatObjectArgs
       .builder()
       .bucket(key.bucket)
       .`object`(key.objectName)
       .build()
-    future(client.statObject(args)).attempt.map(_.isRight)
+    future(client.statObject(args))
   }
 
   def getObject(key: S3Key, range: ByteRange): F[GetObjectResponse] = {
@@ -252,5 +252,24 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
         )
       }
     )
+  }
+
+  def detectContentType(
+      key: S3Key,
+      stat: Option[StatObjectResponse],
+      detect: ContentTypeDetect,
+      hint: Hint
+  ): F[SimpleContentType] = {
+    val readCt =
+      getObjectAsStream(key, 50, ByteRange.Chunk(0, 50))
+        .through(detect.detectStream(hint))
+        .compile
+        .lastOrError
+    stat
+      .flatMap(s => Option(s.contentType()))
+      .map(SimpleContentType(_))
+      .filter(c => !c.isOctetStream)
+      .map(_.pure[F])
+      .getOrElse(readCt)
   }
 }

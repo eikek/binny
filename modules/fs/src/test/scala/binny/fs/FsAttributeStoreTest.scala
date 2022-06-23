@@ -22,7 +22,7 @@ class FsAttributeStoreTest extends BinaryAttributeStoreSpec[FsAttributeStore[IO]
   test("calculate sha256 from a file") {
     for {
       ca <- ExampleData.file2M
-        .through(BinaryAttributes.compute(ContentTypeDetect.probeFileType, Hint.none))
+        .through(ComputeAttr.computeAll(ContentTypeDetect.probeFileType, Hint.none))
         .compile
         .lastOrError
       hfs2 <- ExampleData.file2M

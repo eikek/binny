@@ -3,7 +3,7 @@ package binny.minio
 import binny._
 import binny.util.RangeCalc.Offsets
 import binny.util.{Logger, RangeCalc, StreamUtil}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.syntax.all._
 import fs2.{Pipe, Stream}
@@ -63,10 +63,37 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         } yield r
     }
 
-  private def computeAttr(id: BinaryId, hint: Hint): F[BinaryAttributes] =
-    findBinary(id, ByteRange.All)
-      .flatMapF(_.through(BinaryAttributes.compute(config.detect, hint)).compile.last)
-      .getOrElse(BinaryAttributes.empty)
+  def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] = Kleisli { select =>
+    val first = keyMapping.makeS3Key(id)
+    OptionT(minio.statObject(first).attempt.map(_.toOption)).semiflatMap { stat =>
+      select match {
+        case AttributeName.ContainsSha256(_) =>
+          generateS3Keys(id, Offsets.none)
+            .map(_._1)
+            .through(loadChunkFiles)
+            .through(ComputeAttr.computeAll(config.detect, hint))
+            .compile
+            .last
+            .map(_.getOrElse(BinaryAttributes.empty))
+
+        case AttributeName.ContainsLength(_) =>
+          val len =
+            generateS3Keys(id, Offsets.none)
+              .map(_._1)
+              .evalMap(key => minio.statObject(key).attempt.map(_.toOption))
+              .unNoneTerminate
+              .compile
+              .fold(0L)(_ + _.size())
+
+          (minio.detectContentType(first, stat.some, config.detect, hint), len)
+            .mapN(BinaryAttributes.apply)
+        case _ =>
+          minio
+            .detectContentType(first, stat.some, config.detect, hint)
+            .map(c => BinaryAttributes(c, -1L))
+      }
+    }
+  }
 
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] =
     Stream.eval(logger.info(s"List ids with filter: $prefix")) *>
@@ -93,16 +120,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         val offsets = RangeCalc.calcOffset(range, config.chunkSize)
         val allChunks = generateS3Keys(id, offsets)
         if (offsets.isNone) {
-          val contents =
-            allChunks
-              .map(_._1)
-              .evalMap(s3Key =>
-                minio.getObjectAsStreamOption(s3Key, config.chunkSize, ByteRange.All)
-              )
-              .unNoneTerminate
-              .flatten
-
-          OptionT.pure(contents)
+          OptionT.pure(allChunks.map(_._1).through(loadChunkFiles))
         } else {
           OptionT.pure(
             allChunks
@@ -134,7 +152,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
 
   def exists(id: BinaryId): F[Boolean] = {
     val key = keyMapping.makeS3Key(id)
-    minio.statObject(key)
+    minio.statObject(key).attempt.map(_.isRight)
   }
 
   def delete(id: BinaryId): F[Unit] = {
@@ -169,6 +187,11 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         .take(offsets.takeChunks)
         .through(makeS3Key(id))
         .through(StreamUtil.zipWithIndexFrom(offsets.firstChunk))
+
+  private def loadChunkFiles: Pipe[F, S3Key, Byte] =
+    _.evalMap(s3Key =>
+      minio.getObjectAsStreamOption(s3Key, config.chunkSize, ByteRange.All)
+    ).unNoneTerminate.flatten
 
   private def objectName(key: String, n: Int): String = f"$key/chunk_$n%08d"
 

@@ -8,7 +8,7 @@ class BinaryAttributesTest extends FunSuite {
   test("compute attributes from empty stream") {
     val attr =
       Binary.empty.through(
-        BinaryAttributes.compute(ContentTypeDetect.none, Hint.none)
+        ComputeAttr.computeAll(ContentTypeDetect.none, Hint.none)
       )
 
     val expect = BinaryAttributes(
@@ -24,7 +24,7 @@ class BinaryAttributesTest extends FunSuite {
   test("compute attributes from non-empty stream") {
     val attr =
       ExampleData.helloWorld.through(
-        BinaryAttributes.compute(ContentTypeDetect.none, Hint.none)
+        ComputeAttr.computeAll(ContentTypeDetect.none, Hint.none)
       )
 
     val expect = BinaryAttributes(

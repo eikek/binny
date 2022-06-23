@@ -1,14 +1,13 @@
 package binny.jdbc
 
 import javax.sql.DataSource
-
 import binny._
 import binny.jdbc.impl.DbRunApi.ChunkInfo
 import binny.jdbc.impl.Implicits._
 import binny.jdbc.impl.{DataSourceResource, DbRunApi}
 import binny.util.RangeCalc.Offsets
 import binny.util.{Logger, RangeCalc, Stopwatch}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.{Chunk, Pipe, Stream}
@@ -49,10 +48,10 @@ object GenericJdbcStore {
     private[this] val dataApi = new DbRunApi[F](config.dataTable, logger)
 
     private def saveAttr(id: BinaryId, hint: Hint) = {
-      val ba = dataApi.computeAttr(id, config.detect, hint).execute(ds)
+      val ba = dataApi.computeAttrAll(id, config.detect, hint).execute(ds)
       for {
         w <- Stopwatch.start[F]
-        _ <- attrStore.saveAttr(id, ba)
+        _ <- attrStore.saveAttr(id, ComputeAttr.liftF(ba))
         _ <- Stopwatch.show(w)(d =>
           logger.debug(s"Computing and storing attributes for ${id.id} took $d")
         )
@@ -192,24 +191,51 @@ object GenericJdbcStore {
         _ <- Stopwatch.show(w)(d => logger.info(s"Deleting ${id.id} took $d"))
       } yield ()
 
-    def computeAttr(id: BinaryId, hint: Hint): OptionT[F, BinaryAttributes] = {
-      val attr =
-        dataApi
-          .exists(id)
-          .flatMap(_ =>
-            dataApi
-              .computeAttr(id, config.detect, hint)
-              .mapF(OptionT.liftF[F, BinaryAttributes])
-          )
+    def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
+      Kleisli { select =>
+        val attr =
+          select match {
+            case AttributeName.ContainsSha256(_) =>
+              dataApi
+                .exists(id)
+                .flatMap(_ =>
+                  dataApi
+                    .computeAttrAll(id, config.detect, hint)
+                    .mapF(OptionT.liftF[F, BinaryAttributes])
+                )
+            case AttributeName.ContainsLength(_) =>
+              dataApi
+                .exists(id)
+                .flatMap(_ =>
+                  dataApi
+                    .computeAttrLen(id)
+                    .flatMap(len =>
+                      dataApi
+                        .computeAttrDetect(id, config.detect, hint)
+                        .map(ct => BinaryAttributes(ct, len))
+                    )
+                    .mapF(OptionT.liftF[F, BinaryAttributes])
+                )
 
-      for {
-        w <- OptionT.liftF(Stopwatch.start[F])
-        a <- attr.execute(ds)
-        _ <- OptionT.liftF(
-          Stopwatch.show(w)(d => logger.debug(s"Computing attributes took: $d"))
-        )
-      } yield a
-    }
+            case _ =>
+              dataApi
+                .exists(id)
+                .flatMap(_ =>
+                  dataApi
+                    .computeAttrDetect(id, config.detect, hint)
+                    .map(ct => BinaryAttributes(ct, -1))
+                    .mapF(OptionT.liftF[F, BinaryAttributes])
+                )
+          }
+
+        for {
+          w <- OptionT.liftF(Stopwatch.start[F])
+          a <- attr.execute(ds)
+          _ <- OptionT.liftF(
+            Stopwatch.show(w)(d => logger.debug(s"Computing attributes took: $d"))
+          )
+        } yield a
+      }
 
     def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] =
       dataApi.listAllIds(prefix, chunkSize, ds)

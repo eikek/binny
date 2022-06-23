@@ -17,6 +17,8 @@ object SimpleBinaryStoreFixtures {
         OptionT.liftF(IO.raiseError(new RuntimeException("invalid")))
       def exists(id: BinaryId) =
         IO.raiseError(new RuntimeException("invalid"))
+      def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[IO] =
+        ComputeAttr.raiseError[IO](new RuntimeException("invalid"))
       def delete(id: BinaryId) = IO.unit
     }
 
@@ -32,6 +34,8 @@ object SimpleBinaryStoreFixtures {
         OptionT.liftF(IO.raiseError(new RuntimeException("invalid")))
       def exists(id: BinaryId) =
         IO.raiseError(new RuntimeException("invalid"))
+      def computeAttr(id: BinaryId, hint: Hint) =
+        ComputeAttr.raiseError[IO](new RuntimeException("invalid"))
       def delete(id: BinaryId) =
         IO.raiseError(new RuntimeException("invalid"))
     }

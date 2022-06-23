@@ -6,8 +6,10 @@ package binny
 final class SimpleContentType private (val contentType: String) extends AnyVal {
 
   def or(other: => SimpleContentType): SimpleContentType =
-    if (contentType.startsWith(SimpleContentType.octetStream.contentType)) other
-    else this
+    if (isOctetStream) other else this
+
+  def isOctetStream =
+    contentType.startsWith(SimpleContentType.octetStream.contentType)
 
   def isText: Boolean =
     contentType.startsWith("text/")
