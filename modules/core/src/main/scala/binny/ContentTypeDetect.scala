@@ -52,6 +52,9 @@ object ContentTypeDetect {
         .getOrElse(SimpleContentType.octetStream)
     }
 
+  def constant(ct: SimpleContentType): ContentTypeDetect =
+    ContentTypeDetect((_, _) => ct)
+
   def apply(f: (ByteVector, Hint) => SimpleContentType): ContentTypeDetect =
     (data: ByteVector, hint: Hint) => f(data, hint)
 

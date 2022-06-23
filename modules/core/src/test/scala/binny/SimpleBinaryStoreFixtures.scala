@@ -9,9 +9,9 @@ object SimpleBinaryStoreFixtures {
     new BinaryStore[IO] {
       def listIds(prefix: Option[String], chunkSize: Int) =
         Stream.raiseError[IO](new RuntimeException("invalid"))
-      def insert(hint: Hint) =
+      def insert =
         _ => Stream.eval(BinaryId.random[IO])
-      def insertWith(id: BinaryId, hint: Hint) =
+      def insertWith(id: BinaryId) =
         _ => Stream.empty
       def findBinary(id: BinaryId, range: ByteRange) =
         OptionT.liftF(IO.raiseError(new RuntimeException("invalid")))
@@ -26,9 +26,9 @@ object SimpleBinaryStoreFixtures {
     new BinaryStore[IO] {
       def listIds(prefix: Option[String], chunkSize: Int) =
         Stream.raiseError[IO](new RuntimeException("invalid"))
-      def insert(hint: Hint) =
+      def insert =
         _ => Stream.raiseError[IO](new RuntimeException("invalid"))
-      def insertWith(id: BinaryId, hint: Hint) =
+      def insertWith(id: BinaryId) =
         _ => Stream.raiseError[IO](new RuntimeException("invalid"))
       def findBinary(id: BinaryId, range: ByteRange) =
         OptionT.liftF(IO.raiseError(new RuntimeException("invalid")))

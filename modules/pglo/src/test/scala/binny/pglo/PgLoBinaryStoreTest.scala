@@ -16,7 +16,7 @@ class PgLoBinaryStoreTest
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:14"))
 
-  val binStore: Fixture[PgLoBinaryStore[IO]] =
+  val binStoreFixture: Fixture[PgLoBinaryStore[IO]] =
     ResourceSuiteLocalFixture(
       "pglo-store",
       Resource
@@ -26,5 +26,6 @@ class PgLoBinaryStoreTest
 
   assume(Docker.existsUnsafe, "docker not present")
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStoreFixture)
+  override def binStore = binStoreFixture()
 }

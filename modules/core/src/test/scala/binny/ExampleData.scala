@@ -26,7 +26,7 @@ object ExampleData {
       ByteVector.fromValidHex(
         "f69322b62de9c0196cf858a8c023a0cb21171fcfc34bb757137bfbf9953a4b2e"
       ),
-      SimpleContentType.octetStream,
+      SimpleContentType.textPlain,
       1978876L
     )
 

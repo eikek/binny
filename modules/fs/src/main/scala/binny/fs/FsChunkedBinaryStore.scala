@@ -15,10 +15,9 @@ import scodec.bits.ByteVector
   */
 class FsChunkedBinaryStore[F[_]: Async](
     cfg: FsChunkedStoreConfig,
-    logger: Logger[F],
-    attrStore: BinaryAttributeStore[F]
+    logger: Logger[F]
 ) extends ChunkedBinaryStore[F] {
-  private val fsStore = FsBinaryStore[F](cfg.toStoreConfig, logger, attrStore)
+  private val fsStore = FsBinaryStore[F](cfg.toStoreConfig, logger)
 
   override def insertChunk(
       id: BinaryId,
@@ -53,10 +52,6 @@ class FsChunkedBinaryStore[F[_]: Async](
           )
           _ <- insert
           r <- checkComplete
-          _ <-
-            if (r == InsertChunkResult.Complete)
-              attrStore.saveAttr(id, computeAttr(id, hint))
-            else ().pure[F]
         } yield r
     }
 
@@ -144,16 +139,16 @@ class FsChunkedBinaryStore[F[_]: Async](
     prefix.map(p => all.filter(_.id.startsWith(p))).getOrElse(all)
   }
 
-  def insert(hint: Hint) = fsStore.insert(hint)
+  def insert = fsStore.insert
 
-  def insertWith(id: BinaryId, hint: Hint) = fsStore.insertWith(id, hint)
+  def insertWith(id: BinaryId) = fsStore.insertWith(id)
 
   def exists(id: BinaryId): F[Boolean] =
     listChunkFiles(id, Offsets.oneChunk).take(1).compile.last.map(_.isDefined)
 
   def delete(id: BinaryId): F[Unit] = {
     val target = cfg.targetDir(id)
-    attrStore.deleteAttr(id) *> Impl.deleteDir[F](target)
+    Impl.deleteDir[F](target)
   }
 
   private def makeFile(id: BinaryId, chunkIndex: Int) =
@@ -185,21 +180,11 @@ object FsChunkedBinaryStore {
   private[fs] def fileName(n: Int): String = f"chunk_$n%08d"
 
   def apply[F[_]: Async](
-      config: FsChunkedStoreConfig,
       logger: Logger[F],
-      attrStore: BinaryAttributeStore[F]
+      config: FsChunkedStoreConfig
   ): FsChunkedBinaryStore[F] =
-    new FsChunkedBinaryStore[F](config, logger, attrStore)
-
-  def apply[F[_]: Async](
-      logger: Logger[F],
-      storeCfg: FsChunkedStoreConfig,
-      attrCfg: FsAttrConfig
-  ): FsChunkedBinaryStore[F] = {
-    val attrStore = FsAttributeStore(attrCfg)
-    new FsChunkedBinaryStore[F](storeCfg, logger, attrStore)
-  }
+    new FsChunkedBinaryStore[F](config, logger)
 
   def default[F[_]: Async](logger: Logger[F], baseDir: Path): FsChunkedBinaryStore[F] =
-    apply(logger, FsChunkedStoreConfig.defaults(baseDir), FsAttrConfig.default(baseDir))
+    apply(logger, FsChunkedStoreConfig.defaults(baseDir))
 }

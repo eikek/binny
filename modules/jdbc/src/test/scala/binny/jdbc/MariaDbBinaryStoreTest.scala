@@ -17,7 +17,7 @@ class MariaDbBinaryStoreTest extends GenericJdbcStoreSpec with DbFixtures {
   val containerDef: MariaDBContainer.Def =
     MariaDBContainer.Def(DockerImageName.parse("mariadb:10.5"))
 
-  val binStore = ResourceSuiteLocalFixture(
+  val binStore1 = ResourceSuiteLocalFixture(
     "mariadb-store",
     Resource
       .make(IO {
@@ -55,7 +55,9 @@ class MariaDbBinaryStoreTest extends GenericJdbcStoreSpec with DbFixtures {
         )
     )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore, binStore2)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStore1, binStore2)
+
+  override def binStore = binStore1()
 
   def dataSource =
     ConnectionConfig(

@@ -23,39 +23,13 @@ trait DbFixtures { self: CatsEffectSuite =>
   ): GenericJdbcStore[IO] = {
     implicit val log: Logger[IO] = logger
     val ds = ConnectionConfig.h2Memory(db.replaceAll("\\s+", "_")).dataSource
-    val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
-    val store = GenericJdbcStore[IO](ds, logger, config, attrStore)
+    val store = GenericJdbcStore[IO](ds, logger, config)
     if (createSchema) {
       DatabaseSetup
-        .runBoth[IO](Dbms.PostgreSQL, ds, config.dataTable, JdbcAttrConfig.default.table)
+        .runData[IO](Dbms.PostgreSQL, ds, config.dataTable)
         .unsafeRunSync()
     }
     store
-  }
-
-  def h2AttrStore(
-      db: String,
-      logger: Logger[IO],
-      cfg: JdbcAttrConfig
-  ): JdbcAttributeStore[IO] = {
-    val ds = ConnectionConfig.h2Memory(db.replaceAll("\\s+", "_")).dataSource
-    val store = JdbcAttributeStore[IO](cfg, ds, logger)
-    store.runSetup(Dbms.H2).unsafeRunSync()
-    store
-  }
-
-  def makeAttrStore(
-      cnt: JdbcDatabaseContainer,
-      logger: Logger[IO],
-      cfg: JdbcAttrConfig
-  ): JdbcAttributeStore[IO] = {
-    val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val ds = cc.dataSource
-    implicit val log: Logger[IO] = logger
-    DatabaseSetup
-      .runAttr[IO](Dbms.unsafeFromJdbcUrl(cnt.jdbcUrl), ds, cfg.table)
-      .unsafeRunSync()
-    JdbcAttributeStore(cfg, ds, logger)
   }
 
   def makeBinStore(
@@ -67,16 +41,13 @@ trait DbFixtures { self: CatsEffectSuite =>
     implicit val log: Logger[IO] = logger
 
     val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val ds = cc.dataSource
-    val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
-    val store = GenericJdbcStore[IO](cc.dataSource, logger, cfg, attrStore)
+    val store = GenericJdbcStore[IO](cc.dataSource, logger, cfg)
     if (createSchema) {
       DatabaseSetup
-        .runBoth[IO](
+        .runData[IO](
           Dbms.unsafeFromJdbcUrl(cnt.jdbcUrl),
           cc.dataSource,
-          cfg.dataTable,
-          JdbcAttrConfig.default.table
+          cfg.dataTable
         )
         .unsafeRunSync()
     }

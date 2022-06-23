@@ -1,6 +1,7 @@
 package binny.minio
 
 import java.io.BufferedInputStream
+
 import binny._
 import binny.util.{Logger, Stopwatch}
 import cats.data.{Kleisli, OptionT}
@@ -12,7 +13,6 @@ import io.minio.MinioAsyncClient
 final class MinioBinaryStore[F[_]: Async](
     val config: MinioConfig,
     private[minio] val client: MinioAsyncClient,
-    attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
 ) extends BinaryStore[F] {
 
@@ -31,13 +31,13 @@ final class MinioBinaryStore[F[_]: Async](
         .flatMap(listBucket)
   }
 
-  def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
+  def insert: Pipe[F, Byte, BinaryId] =
     in =>
       Stream
         .eval(BinaryId.random)
-        .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
+        .flatMap(id => in.through(insertWith(id)) ++ Stream.emit(id))
 
-  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+  def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
     bytes =>
       Stream.eval {
         val key = config.makeS3Key(id)
@@ -45,7 +45,7 @@ final class MinioBinaryStore[F[_]: Async](
         val upload =
           for {
             _ <- Stream.eval(minio.makeBucketIfMissing(key.bucket))
-            _ <- minio.uploadObject(key, config.partSize, config.detect, hint, inStream)
+            _ <- minio.uploadObject(key, config.partSize, config.detect, inStream)
           } yield ()
 
         for {
@@ -90,9 +90,6 @@ final class MinioBinaryStore[F[_]: Async](
     val key = config.makeS3Key(id)
     minio.statObject(key).attempt.map(_.isRight)
   }
-
-  def findAttr(id: BinaryId): OptionT[F, BinaryAttributes] =
-    attrStore.findAttr(id)
 }
 
 object MinioBinaryStore {
@@ -100,14 +97,12 @@ object MinioBinaryStore {
   def apply[F[_]: Async](
       config: MinioConfig,
       client: MinioAsyncClient,
-      attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioBinaryStore[F] =
-    new MinioBinaryStore[F](config, client, attrStore, logger)
+    new MinioBinaryStore[F](config, client, logger)
 
   def apply[F[_]: Async](
       config: MinioConfig,
-      attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioBinaryStore[F] =
     new MinioBinaryStore[F](
@@ -117,7 +112,6 @@ object MinioBinaryStore {
         .endpoint(config.endpoint)
         .credentials(config.accessKey, config.secretKey)
         .build(),
-      attrStore,
       logger
     )
 }

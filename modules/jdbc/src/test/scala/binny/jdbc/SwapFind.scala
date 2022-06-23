@@ -6,11 +6,11 @@ import fs2.Pipe
 
 final class SwapFind[F[_]](delegate: JdbcBinaryStore[F]) extends BinaryStore[F] {
 
-  def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
-    delegate.insert(hint)
+  def insert: Pipe[F, Byte, BinaryId] =
+    delegate.insert
 
-  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
-    delegate.insertWith(id, hint)
+  def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
+    delegate.insertWith(id)
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] =
     delegate.findBinaryStateful(id, range)

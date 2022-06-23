@@ -14,12 +14,15 @@ final class SimpleContentType private (val contentType: String) extends AnyVal {
   def isText: Boolean =
     contentType.startsWith("text/")
 
-  override def toString(): String = s"SimpleContentType($contentType)"
+  override def toString: String = s"SimpleContentType($contentType)"
 }
 
 object SimpleContentType {
   val octetStream: SimpleContentType =
     new SimpleContentType("application/octet-stream")
+
+  val textPlain: SimpleContentType =
+    new SimpleContentType("text/plain")
 
   def apply(ct: String): SimpleContentType =
     if (ct.trim.isEmpty) octetStream

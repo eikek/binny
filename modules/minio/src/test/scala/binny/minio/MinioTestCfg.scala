@@ -2,7 +2,6 @@ package binny.minio
 
 import java.time.Duration
 
-import binny.BinaryAttributeStore
 import binny.util.Logger
 import cats.effect._
 import io.minio.MinioAsyncClient
@@ -22,7 +21,6 @@ object MinioTestCfg {
   def store(m: S3KeyMapping, ip: String, port: Int): MinioBinaryStore[IO] =
     MinioBinaryStore(
       testing(m, ip, port),
-      BinaryAttributeStore.empty[IO],
       Logger.stdout[IO](Logger.Level.Warn, "MinioBinaryStore")
     )
 

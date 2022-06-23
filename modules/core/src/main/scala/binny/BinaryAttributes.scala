@@ -1,11 +1,12 @@
 package binny
 
 import java.io.{ByteArrayOutputStream, StringReader}
-import java.util.Properties
-import scala.util.Try
-import scodec.bits.ByteVector
-
 import java.nio.charset.StandardCharsets
+import java.util.Properties
+
+import scala.util.Try
+
+import scodec.bits.ByteVector
 
 /** Basic attributes of binary data. */
 final case class BinaryAttributes(

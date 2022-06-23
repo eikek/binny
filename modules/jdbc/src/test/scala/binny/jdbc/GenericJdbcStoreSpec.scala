@@ -2,8 +2,8 @@ package binny.jdbc
 
 import javax.sql.DataSource
 
-import binny._
 import binny.ExampleData._
+import binny._
 import binny.jdbc.impl.DbRunApi
 import binny.jdbc.impl.Implicits._
 import binny.spec.BinaryStoreSpec
@@ -18,9 +18,9 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
   def dataSource: DataSource
 
   test("different chunk size when storing and loading") {
-    val store = binStore()
+    val store = binStore
     val id = ExampleData.file2M
-      .through(store.insert(Hint.none))
+      .through(store.insert)
       .compile
       .lastOrError
       .unsafeRunSync()
@@ -55,28 +55,24 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
   }
 
   test("failing stream creates no data") {
-    val store = binStore()
+    val store = binStore
     val ds = dataSource // same ds as binStore()
-    val attrDB = new DbRunApi[IO](JdbcAttrConfig.default.table, logger)
     val dataDB = new DbRunApi[IO](JdbcStoreConfig.default.dataTable, logger)
     for {
-      attrCount <- attrDB.countAll().execute(ds)
       dataCount <- dataDB.countAll().execute(ds)
       idEither <- ExampleData.fail
-        .through(store.insert(Hint.none))
+        .through(store.insert)
         .attempt
         .compile
         .lastOrError
       _ = assert(idEither.isLeft)
-      attrCount2 <- attrDB.countAll().execute(ds)
       dataCount2 <- dataDB.countAll().execute(ds)
-      _ = assertEquals(attrCount2, attrCount)
       _ = assertEquals(dataCount2, dataCount)
     } yield ()
   }
 
   test("insert chunks out of order") {
-    val store = binStore()
+    val store = binStore
     val chunks = ExampleData.file2M
       .chunkN(JdbcStoreConfig.default.chunkSize)
       .zipWithIndex
@@ -98,7 +94,7 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
       _ = assertEquals(res.last, InsertChunkResult.Complete)
       _ = assertEquals(res.init.toSet, Set(InsertChunkResult.incomplete))
       attrs <- store
-        .computeAttr(id, Hint.none)
+        .computeAttr(id, hintTxt)
         .run(AttributeName.all)
         .getOrElse(sys.error("not found"))
       _ = assertEquals(attrs, ExampleData.file2MAttr)
@@ -106,7 +102,7 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
   }
 
   test("insert chunks out of order concurrently") {
-    val store = binStore()
+    val store = binStore
     val chunks = ExampleData.file2M
       .chunkN(JdbcStoreConfig.default.chunkSize)
       .zipWithIndex
@@ -131,7 +127,7 @@ abstract class GenericJdbcStoreSpec extends BinaryStoreSpec[GenericJdbcStore[IO]
       id <- BinaryId.random[IO]
       res <- insertConcurrent(id).compile.toVector
       attrs <- store
-        .computeAttr(id, Hint.none)
+        .computeAttr(id, hintTxt)
         .run(AttributeName.all)
         .getOrElse(sys.error("not found"))
       _ = assertEquals(attrs, ExampleData.file2MAttr)

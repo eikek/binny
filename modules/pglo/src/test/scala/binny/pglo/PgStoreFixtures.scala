@@ -13,23 +13,12 @@ trait PgStoreFixtures {
       logger: Logger[IO],
       cfg: PgLoConfig
   ): PgLoBinaryStore[IO] = {
-    implicit val log = logger
-
     val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
     val ds = cc.dataSource
-    val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
-    val store = PgLoBinaryStore[IO](cfg, logger, cc.dataSource, attrStore)
-    DatabaseSetup
-      .runAttr[IO](
-        Dbms.PostgreSQL,
-        cc.dataSource,
-        JdbcAttrConfig.default.table
-      )
-      .unsafeRunSync()
+    val store = PgLoBinaryStore[IO](cfg, logger, cc.dataSource)
     PgSetup.run[IO](cfg.table, logger, ds).unsafeRunSync()
     store
   }
-
 }
 
 object PgStoreFixtures extends PgStoreFixtures

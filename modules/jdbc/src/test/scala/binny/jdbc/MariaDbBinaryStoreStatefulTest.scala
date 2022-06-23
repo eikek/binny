@@ -15,13 +15,16 @@ class MariaDbBinaryStoreStatefulTest
   val containerDef: MariaDBContainer.Def =
     MariaDBContainer.Def(DockerImageName.parse("mariadb:10.5"))
 
-  val binStore = ResourceSuiteLocalFixture(
+  val binStoreFixture = ResourceSuiteLocalFixture(
     "jdbc-store",
     Resource
       .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
-      .map(cnt => SwapFind(makeBinStore(cnt, logger, JdbcStoreConfig.default, true)))
+      .map(cnt =>
+        SwapFind(makeBinStore(cnt, logger, JdbcStoreConfig.default, createSchema = true))
+      )
   )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStoreFixture)
 
+  override def binStore = binStoreFixture()
 }

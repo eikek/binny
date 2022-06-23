@@ -41,18 +41,18 @@ final case class ConnectionConfig(
         ds
     }
 
-  def setup[F[_]: Sync](dataTable: String, attrTable: String)(implicit
+  def setup[F[_]: Sync](dataTable: String)(implicit
       log: Logger[F]
   ): F[Int] =
     dbms match {
       case Dbms.PostgreSQL =>
-        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
+        DatabaseSetup.runData(Dbms.PostgreSQL, dataSource, dataTable)
 
       case Dbms.H2 =>
-        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
+        DatabaseSetup.runData(Dbms.PostgreSQL, dataSource, dataTable)
 
       case Dbms.MariaDB =>
-        DatabaseSetup.runBoth(Dbms.MariaDB, dataSource, dataTable, attrTable)
+        DatabaseSetup.runData(Dbms.MariaDB, dataSource, dataTable)
     }
 }
 

@@ -28,18 +28,18 @@ final class StackedBinaryStore[F[_]: Async] private (
     else all.flatten
   }
 
-  def insert(hint: Hint): Pipe[F, Byte, BinaryId] = in =>
+  def insert: Pipe[F, Byte, BinaryId] = in =>
     in
-      .through(main.insert(hint))
+      .through(main.insert)
       .flatMap { id =>
-        val rest = withRemaining(s => in.through(s.insertWith(id, hint)))
+        val rest = withRemaining(s => in.through(s.insertWith(id)))
         rest ++ Stream.emit(id)
       }
 
-  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+  def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
     in => {
-      val a = in.through(main.insertWith(id, hint))
-      val rest = withRemaining(s => in.through(s.insertWith(id, hint)))
+      val a = in.through(main.insertWith(id))
+      val rest = withRemaining(s => in.through(s.insertWith(id)))
       a ++ rest
     }
 
@@ -55,10 +55,10 @@ final class StackedBinaryStore[F[_]: Async] private (
   def computeAttr(id: BinaryId, hint: Hint) =
     main.computeAttr(id, hint)
 
-  def copyMainToRest(fromMeta: BinaryAttributeStore[F]): F[List[CopyTool.Counter]] = {
+  def copyMainToRest: F[List[CopyTool.Counter]] = {
     val maxConcurrent = math.max(Runtime.getRuntime.availableProcessors() * 1.5, 4)
     def copyTo(to: BinaryStore[F]) =
-      CopyTool.copyAll(logger, main, fromMeta, to, 100, maxConcurrent.toInt)
+      CopyTool.copyAll(logger, main, to, 100, maxConcurrent.toInt)
 
     stores.tail.traverse(copyTo)
   }

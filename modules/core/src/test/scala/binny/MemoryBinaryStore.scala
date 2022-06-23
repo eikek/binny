@@ -16,13 +16,13 @@ class MemoryBinaryStore[F[_]: Sync](
     prefix.map(p => all.filter(id => id.id.startsWith(p))).getOrElse(all)
   }
 
-  def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
+  def insert: Pipe[F, Byte, BinaryId] =
     in =>
       Stream
         .eval(BinaryId.random[F])
-        .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
+        .flatMap(id => in.through(insertWith(id)) ++ Stream.emit(id))
 
-  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+  def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
     in => {
       val bytes = in.chunks.map(_.toByteVector).compile.fold(ByteVector.empty)(_ ++ _)
       Stream.eval(bytes.flatMap(bs => data.update(_.updated(id, bs)))).drain

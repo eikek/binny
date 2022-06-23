@@ -1,6 +1,7 @@
 package binny.jdbc
 
 import javax.sql.DataSource
+
 import binny._
 import binny.jdbc.impl.DbRunApi.ChunkInfo
 import binny.jdbc.impl.Implicits._
@@ -19,52 +20,31 @@ object GenericJdbcStore {
   def apply[F[_]: Sync](
       ds: DataSource,
       logger: Logger[F],
-      config: JdbcStoreConfig,
-      attrStore: BinaryAttributeStore[F]
+      config: JdbcStoreConfig
   ): GenericJdbcStore[F] =
-    new Impl[F](ds, logger, config, attrStore)
-
-  def apply[F[_]: Sync](
-      ds: DataSource,
-      logger: Logger[F],
-      config: JdbcStoreConfig,
-      attrCfg: JdbcAttrConfig
-  ): GenericJdbcStore[F] =
-    new Impl[F](ds, logger, config, JdbcAttributeStore(attrCfg, ds, logger))
+    new Impl[F](ds, logger, config)
 
   def default[F[_]: Sync](ds: DataSource, logger: Logger[F]): GenericJdbcStore[F] =
-    apply(ds, logger, JdbcStoreConfig.default, JdbcAttrConfig.default)
+    apply(ds, logger, JdbcStoreConfig.default)
 
   // -- impl
 
   final private class Impl[F[_]: Sync](
       ds: DataSource,
       logger: Logger[F],
-      val config: JdbcStoreConfig,
-      attrStore: BinaryAttributeStore[F]
+      val config: JdbcStoreConfig
   ) extends GenericJdbcStore[F] {
 
     implicit private val log: Logger[F] = logger
     private[this] val dataApi = new DbRunApi[F](config.dataTable, logger)
 
-    private def saveAttr(id: BinaryId, hint: Hint) = {
-      val ba = dataApi.computeAttrAll(id, config.detect, hint).execute(ds)
-      for {
-        w <- Stopwatch.start[F]
-        _ <- attrStore.saveAttr(id, ComputeAttr.liftF(ba))
-        _ <- Stopwatch.show(w)(d =>
-          logger.debug(s"Computing and storing attributes for ${id.id} took $d")
-        )
-      } yield ()
-    }
-
-    def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
+    def insert: Pipe[F, Byte, BinaryId] =
       in =>
         Stream
           .eval(BinaryId.random)
-          .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
+          .flatMap(id => in.through(insertWith(id)) ++ Stream.emit(id))
 
-    def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+    def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
       bytes =>
         {
           val inserts =
@@ -78,7 +58,7 @@ object GenericJdbcStore {
           for {
             _ <- logger.s.debug(s"Inserting data for id ${id.id}")
             w <- Stream.eval(Stopwatch.start[F])
-            _ <- Stream.eval(inserts *> saveAttr(id, hint))
+            _ <- Stream.eval(inserts)
             _ <- Stream.eval(
               Stopwatch.show(w)(d => logger.debug(s"Inserting ${id.id} took $d"))
             )
@@ -105,12 +85,7 @@ object GenericJdbcStore {
             .execute(ds)
 
           logger.trace(s"Insert chunk ${ch.index + 1}/${ch.total} of size $len") *>
-            insert.flatTap {
-              case InsertChunkResult.Complete =>
-                saveAttr(id, hint)
-              case _ =>
-                ().pure[F]
-            }
+            insert
       }
 
     /** Finds a binary by its id. The data stream loads the bytes chunk-wise from the
@@ -187,7 +162,6 @@ object GenericJdbcStore {
       for {
         w <- Stopwatch.start[F]
         _ <- dataApi.delete(id).inTX.execute(ds)
-        _ <- attrStore.deleteAttr(id)
         _ <- Stopwatch.show(w)(d => logger.info(s"Deleting ${id.id} took $d"))
       } yield ()
 

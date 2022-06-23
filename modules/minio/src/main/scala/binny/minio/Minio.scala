@@ -96,7 +96,6 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       key: S3Key,
       partSize: Int,
       detect: ContentTypeDetect,
-      hint: Hint,
       in: Stream[F, InputStream]
   ): Stream[F, Unit] =
     in.evalMap(javaStream =>
@@ -106,7 +105,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
             val buffer = new Array[Byte](32)
             javaStream.mark(65)
             val read = javaStream.read(buffer)
-            val ret = detect.detect(ByteVector.view(buffer, 0, read), hint)
+            val ret = detect.detect(ByteVector.view(buffer, 0, read), Hint.none)
             javaStream.reset()
             ret
           } else SimpleContentType.octetStream
@@ -126,10 +125,9 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       key: S3Key,
       partSize: Int,
       detect: ContentTypeDetect,
-      hint: Hint,
       in: ByteVector
   ): F[ObjectWriteResponse] = {
-    val ct = detect.detect(in, hint)
+    val ct = detect.detect(in, Hint.none)
     val args = new PutObjectArgs.Builder()
       .bucket(key.bucket)
       .`object`(key.objectName)
@@ -245,6 +243,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
             ct = Some(detect.detect(ByteVector.view(buf, 0, read), hint))
           }
         }
+        resp.close()
         BinaryAttributes(
           ByteVector.view(md.digest()),
           ct.getOrElse(SimpleContentType.octetStream),

@@ -1,7 +1,7 @@
-import cats.{Applicative, ApplicativeError, Functor}
-import cats.data.{Kleisli, NonEmptySet, OptionT}
-
 import java.security.MessageDigest
+
+import cats.data.{Kleisli, NonEmptySet, OptionT}
+import cats.{Applicative, ApplicativeError, Functor}
 import fs2.{Chunk, Pipe, Stream}
 import scodec.bits.ByteVector
 

@@ -15,13 +15,18 @@ class PostgresBinaryStoreStatefulTest
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))
 
-  val binStore: Fixture[BinaryStore[IO]] =
+  val binStoreFixture: Fixture[BinaryStore[IO]] =
     ResourceSuiteLocalFixture(
       "pg-store",
       Resource
         .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
-        .map(cnt => SwapFind(makeBinStore(cnt, logger, JdbcStoreConfig.default, true)))
+        .map(cnt =>
+          SwapFind(
+            makeBinStore(cnt, logger, JdbcStoreConfig.default, createSchema = true)
+          )
+        )
     )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStoreFixture)
+  override def binStore = binStoreFixture()
 }

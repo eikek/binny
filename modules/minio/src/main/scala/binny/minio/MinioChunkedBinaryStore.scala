@@ -13,7 +13,6 @@ import scodec.bits.ByteVector
 final class MinioChunkedBinaryStore[F[_]: Async](
     val config: MinioConfig,
     private[minio] val client: MinioAsyncClient,
-    attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
 ) extends ChunkedBinaryStore[F] {
   private[this] val minio = new Minio[F](client)
@@ -26,7 +25,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
   )
 
   private[this] val minioStore =
-    MinioBinaryStore[F](config.withKeyMapping(keyMapping), client, attrStore, logger)
+    MinioBinaryStore[F](config.withKeyMapping(keyMapping), client, logger)
 
   def insertChunk(
       id: BinaryId,
@@ -41,7 +40,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         val s3Key =
           config.keyMapping.makeS3Key(id).changeObjectName(n => objectName(n, ch.index))
         val insert =
-          minio.uploadObject(s3Key, config.partSize, config.detect, hint, data)
+          minio.uploadObject(s3Key, config.partSize, config.detect, data)
 
         val checkComplete =
           listChunks(id, max = 100).compile.count
@@ -56,10 +55,6 @@ final class MinioChunkedBinaryStore[F[_]: Async](
           )
           _ <- insert
           r <- checkComplete
-          _ <-
-            if (r == InsertChunkResult.Complete)
-              attrStore.saveAttr(id, computeAttr(id, hint))
-            else ().pure[F]
         } yield r
     }
 
@@ -103,11 +98,9 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         .flatMap(bucket => minio.listObjects(bucket, None, 100, prefix))
         .map(idFromObjectName)
 
-  def insert(hint: Hint) =
-    minioStore.insert(hint)
+  def insert = minioStore.insert
 
-  def insertWith(id: BinaryId, hint: Hint) =
-    minioStore.insertWith(id, hint)
+  def insertWith(id: BinaryId) = minioStore.insertWith(id)
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val list = listChunks(id, max = 2).take(2).compile.toList
@@ -209,14 +202,12 @@ object MinioChunkedBinaryStore {
   def apply[F[_]: Async](
       config: MinioConfig,
       client: MinioAsyncClient,
-      attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioChunkedBinaryStore[F] =
-    new MinioChunkedBinaryStore[F](config, client, attrStore, logger)
+    new MinioChunkedBinaryStore[F](config, client, logger)
 
   def apply[F[_]: Async](
       config: MinioConfig,
-      attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioChunkedBinaryStore[F] =
     new MinioChunkedBinaryStore[F](
@@ -226,7 +217,6 @@ object MinioChunkedBinaryStore {
         .endpoint(config.endpoint)
         .credentials(config.accessKey, config.secretKey)
         .build(),
-      attrStore,
       logger
     )
 }

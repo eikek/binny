@@ -11,12 +11,12 @@ trait BinaryStore[F[_]] {
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId]
 
   /** Insert the given bytes creating a new id. */
-  def insert(hint: Hint): Pipe[F, Byte, BinaryId]
+  def insert: Pipe[F, Byte, BinaryId]
 
   /** Insert the given bytes to the given id. If some file already exists by this id, the
     * behavior depends on the implementation.
     */
-  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing]
+  def insertWith(id: BinaryId): Pipe[F, Byte, Nothing]
 
   /** Finds a binary by its id. The range argument controls which part to return. */
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]]
@@ -29,9 +29,7 @@ trait BinaryStore[F[_]] {
   /** Deletes all data associated to the given id. */
   def delete(id: BinaryId): F[Unit]
 
-  /** Retrieves a selected set of attributes of a binary. If the binary is not found,
-    * `BinaryAttributes.empty` is returned.
-    */
+  /** Retrieves a selected set of attributes of a binary. */
   def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F]
 }
 
@@ -46,10 +44,10 @@ object BinaryStore {
 
       def exists(id: BinaryId) = false.pure[F]
 
-      def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
+      def insert: Pipe[F, Byte, BinaryId] =
         _ => Stream.eval(BinaryId.random[F])
 
-      def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+      def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
         _ => Stream.empty
 
       def delete(id: BinaryId): F[Unit] =

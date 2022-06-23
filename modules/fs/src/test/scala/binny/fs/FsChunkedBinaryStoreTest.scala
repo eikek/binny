@@ -8,7 +8,7 @@ import fs2.io.file.{Files, Path}
 class FsChunkedBinaryStoreTest extends ChunkedBinaryStoreSpec[FsChunkedBinaryStore[IO]] {
   val logger = Logger.stdout[IO](Logger.Level.Warn, getClass.getSimpleName)
 
-  val binStore = ResourceSuiteLocalFixture(
+  val binStoreFixture = ResourceSuiteLocalFixture(
     "chunked-fs-store",
     for {
       dir <- Files[IO].tempDirectory(Some(Path("target")), "binny-fs-bs-", None)
@@ -16,5 +16,6 @@ class FsChunkedBinaryStoreTest extends ChunkedBinaryStoreSpec[FsChunkedBinarySto
     } yield store
   )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStoreFixture)
+  override def binStore = binStoreFixture()
 }

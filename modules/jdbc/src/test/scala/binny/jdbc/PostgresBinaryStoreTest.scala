@@ -17,7 +17,7 @@ class PostgresBinaryStoreTest extends GenericJdbcStoreSpec with DbFixtures {
   val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:13"))
 
-  val binStore: Fixture[GenericJdbcStore[IO]] =
+  val binStore1: Fixture[GenericJdbcStore[IO]] =
     ResourceSuiteLocalFixture(
       "pg-store",
       Resource
@@ -56,7 +56,8 @@ class PostgresBinaryStoreTest extends GenericJdbcStoreSpec with DbFixtures {
         )
     )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore, binStore2)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStore1, binStore2)
+  override def binStore = binStore1()
 
   def dataSource =
     ConnectionConfig(

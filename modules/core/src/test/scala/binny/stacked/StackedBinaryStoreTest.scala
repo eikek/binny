@@ -13,7 +13,7 @@ class StackedBinaryStoreTest extends CatsEffectSuite with StreamAssertion {
       bs1 <- MemoryBinaryStore.createEmpty[IO]
       bs2 <- MemoryBinaryStore.createEmpty[IO]
       stack = StackedBinaryStore.of(log, bs1, bs2, SimpleBinaryStoreFixtures.throwOnRead)
-      id <- ExampleData.logoPng.through(stack.insert(Hint.none)).compile.lastOrError
+      id <- ExampleData.logoPng.through(stack.insert).compile.lastOrError
       b0 <- stack.findBinary(id, ByteRange.All).value
       b1 <- bs1.findBinary(id, ByteRange.All).value
       b2 <- bs2.findBinary(id, ByteRange.All).value
@@ -27,7 +27,7 @@ class StackedBinaryStoreTest extends CatsEffectSuite with StreamAssertion {
       bs1 <- MemoryBinaryStore.createEmpty[IO]
       bs2 <- MemoryBinaryStore.createEmpty[IO]
       stack = StackedBinaryStore.of(log, bs1, bs2)
-      id <- ExampleData.logoPng.through(stack.insert(Hint.none)).compile.lastOrError
+      id <- ExampleData.logoPng.through(stack.insert).compile.lastOrError
       _ <- stack.delete(id)
       b1 <- bs1.findBinary(id, ByteRange.All).value
       b2 <- bs2.findBinary(id, ByteRange.All).value
@@ -43,7 +43,7 @@ class StackedBinaryStoreTest extends CatsEffectSuite with StreamAssertion {
       bs1 <- MemoryBinaryStore.createEmpty[IO]
       stack = StackedBinaryStore.of(log, SimpleBinaryStoreFixtures.throwAlways, bs1)
       noId <- ExampleData.logoPng
-        .through(stack.insert(Hint.none))
+        .through(stack.insert)
         .compile
         .lastOrError
         .attempt
@@ -58,7 +58,7 @@ class StackedBinaryStoreTest extends CatsEffectSuite with StreamAssertion {
       bs1 <- MemoryBinaryStore.createEmpty[IO]
       stack = StackedBinaryStore.of(log, SimpleBinaryStoreFixtures.throwAlways, bs1)
       id <- ExampleData.logoPng
-        .through(bs1.insert(Hint.none))
+        .through(bs1.insert)
         .compile
         .lastOrError
 
