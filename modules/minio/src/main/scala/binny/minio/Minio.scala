@@ -2,9 +2,10 @@ package binny.minio
 
 import java.io.InputStream
 import java.security.MessageDigest
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.{CompletableFuture, CompletionException}
 
 import scala.jdk.CollectionConverters._
+import scala.util.Using
 
 import binny._
 import cats.effect._
@@ -96,7 +97,6 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       key: S3Key,
       partSize: Int,
       detect: ContentTypeDetect,
-      hint: Hint,
       in: Stream[F, InputStream]
   ): Stream[F, Unit] =
     in.evalMap(javaStream =>
@@ -106,7 +106,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
             val buffer = new Array[Byte](32)
             javaStream.mark(65)
             val read = javaStream.read(buffer)
-            val ret = detect.detect(ByteVector.view(buffer, 0, read), hint)
+            val ret = detect.detect(ByteVector.view(buffer, 0, read), Hint.none)
             javaStream.reset()
             ret
           } else SimpleContentType.octetStream
@@ -126,10 +126,9 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       key: S3Key,
       partSize: Int,
       detect: ContentTypeDetect,
-      hint: Hint,
       in: ByteVector
   ): F[ObjectWriteResponse] = {
-    val ct = detect.detect(in, hint)
+    val ct = detect.detect(in, Hint.none)
     val args = new PutObjectArgs.Builder()
       .bucket(key.bucket)
       .`object`(key.objectName)
@@ -157,14 +156,17 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
     future(client.removeBucket(args)).void
   }
 
-  def statObject(key: S3Key): F[Boolean] = {
+  def statObject(key: S3Key): F[StatObjectResponse] = {
     val args = StatObjectArgs
       .builder()
       .bucket(key.bucket)
       .`object`(key.objectName)
       .build()
-    future(client.statObject(args)).attempt.map(_.isRight)
+    future(client.statObject(args))
   }
+
+  def exists(key: S3Key): F[Boolean] =
+    statObject(key).redeemWith(decodeNotFoundAs(false), _ => true.pure[F])
 
   def getObject(key: S3Key, range: ByteRange): F[GetObjectResponse] = {
     val aargs = GetObjectArgs
@@ -175,45 +177,58 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
     val args = range match {
       case ByteRange.All => aargs.build()
       case ByteRange.Chunk(offset, length) =>
-        aargs.offset(offset).length(length.toLong).build()
+        val ao = if (offset > 0) aargs.offset(offset) else aargs
+        val lo =
+          if (length >= 0 && length < Int.MaxValue) ao.length(length.toLong) else ao
+        lo.build()
     }
     future(client.getObject(args))
   }
 
-  def getObjectOption(key: S3Key, range: ByteRange): F[Option[GetObjectResponse]] = {
-    val translateError: Throwable => F[Option[GetObjectResponse]] = {
-      case ex: ErrorResponseException if ex.response().code() == 404 =>
-        // note: this means either: no bucket, no object, or wrong api path
-        Option.empty[GetObjectResponse].pure[F]
-      case ex => Sync[F].raiseError(ex)
+  def getObjectOption(
+      key: S3Key,
+      range: ByteRange
+  ): F[Option[GetObjectResponse]] =
+    getObject(key, range).redeemWith(
+      decodeNotFoundAs(Option.empty[GetObjectResponse]),
+      _.some.pure[F]
+    )
+
+  def isNotFound(ex: Throwable): Boolean =
+    ex match {
+      case e: ErrorResponseException if e.response().code() == 404 => true
+      case e: CompletionException => isNotFound(e.getCause)
+      case _                      => false
     }
 
-    getObject(key, range).redeemWith(translateError, _.some.pure[F])
-  }
+  def decodeNotFoundAs[A](defaultValue: => A)(ex: Throwable): F[A] =
+    if (isNotFound(ex)) Sync[F].pure(defaultValue)
+    else Sync[F].raiseError(ex)
 
-  def getObjectAsStream(key: S3Key, chunkSize: Int, range: ByteRange): Stream[F, Byte] = {
-    val fin = getObject(key, range).map(a => a: InputStream)
+  def getObjectAsStream(key: S3Key, chunkSize: Int, range: ByteRange): Binary[F] = {
+    val input = getObject(key, range).map(a => a: InputStream)
     fs2.io
-      .unsafeReadInputStream(fin, chunkSize, closeAfterUse = true)
+      .unsafeReadInputStream(input, chunkSize, closeAfterUse = true)
       .mapChunks(c => Chunk.byteVector(c.toByteVector))
   }
 
+  // Note: this method is not safe to use when the resulting stream is unused!
+  // the stream must be pulled in order to close the response
   def getObjectAsStreamOption(
       key: S3Key,
       chunkSize: Int,
       range: ByteRange
-  ): F[Option[Stream[F, Byte]]] =
-    getObjectOption(key, range).map {
-      case Some(resp) =>
+  ): F[Option[Binary[F]]] =
+    getObject(key, range)
+      .redeemWith(decodeNotFoundAs(Option.empty[GetObjectResponse]), _.some.pure[F])
+      .map(_.map { resp =>
         fs2.io
           .unsafeReadInputStream(
-            Sync[F].pure(resp: InputStream),
+            (resp: InputStream).pure[F],
             chunkSize,
             closeAfterUse = true
           )
-          .some
-      case None => None
-    }
+      })
 
   def computeAttr(
       key: S3Key,
@@ -233,16 +248,17 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
         var len = 0L
         var ct = None: Option[SimpleContentType]
         val buf = new Array[Byte](chunkSize)
-
         var read = -1
-
-        while ({
-          read = resp.read(buf); read
-        } > 0) {
-          md.update(buf, 0, read)
-          len = len + read
-          if (ct.isEmpty) {
-            ct = Some(detect.detect(ByteVector.view(buf, 0, read), hint))
+        Using.resource(resp) { rr =>
+          while ({
+            read = rr.read(buf)
+            read
+          } > 0) {
+            md.update(buf, 0, read)
+            len = len + read
+            if (ct.isEmpty) {
+              ct = Some(detect.detect(ByteVector.view(buf, 0, read), hint))
+            }
           }
         }
         BinaryAttributes(
@@ -252,5 +268,24 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
         )
       }
     )
+  }
+
+  def detectContentType(
+      key: S3Key,
+      stat: Option[StatObjectResponse],
+      detect: ContentTypeDetect,
+      hint: Hint
+  ): F[SimpleContentType] = {
+    val readCt =
+      getObjectAsStream(key, 50, ByteRange.Chunk(0, 50))
+        .through(detect.detectStream(hint))
+        .compile
+        .lastOrError
+    stat
+      .flatMap(s => Option(s.contentType()))
+      .map(SimpleContentType(_))
+      .filter(c => !c.isOctetStream)
+      .map(_.pure[F])
+      .getOrElse(readCt)
   }
 }

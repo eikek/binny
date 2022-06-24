@@ -47,6 +47,10 @@ val sharedSettings = Seq(
          )
        else
          Nil),
+  libraryDependencies ++= {
+    if (scalaBinaryVersion.value == "3") Nil
+    else List(compilerPlugin(Dependencies.kindProjectorPlugin))
+  },
   crossScalaVersions := Seq(scala213, scala3),
   Compile / console / scalacOptions := Seq(),
   licenses := Seq("MIT" -> url("http://spdx.org/licenses/MIT")),
@@ -105,13 +109,6 @@ val scalafixSettings = Seq(
   ThisBuild / scalafixDependencies ++= Dependencies.organizeImports
 )
 
-val kindProjectorPlugin = Seq(
-  libraryDependencies ++= {
-    if (scalaBinaryVersion.value == "3") Nil
-    else List(compilerPlugin(Dependencies.kindProjectorPlugin))
-  }
-)
-
 lazy val core = project
   .in(file("modules/core"))
   .enablePlugins(BuildInfoPlugin)
@@ -123,9 +120,21 @@ lazy val core = project
     name := "binny-core",
     description := "The binny api",
     libraryDependencies ++=
-      Dependencies.fs2,
-    kindProjectorPlugin
+      Dependencies.fs2
   )
+
+lazy val tikaDetect = project
+  .in(file("modules/tika-detect"))
+  .settings(sharedSettings)
+  .settings(testSettings)
+  .settings(scalafixSettings)
+  .settings(
+    name := "binny-tika-detect",
+    description := "Detect content types using Apache Tika",
+    libraryDependencies ++=
+      Dependencies.tikaCore
+  )
+  .dependsOn(core)
 
 lazy val fs = project
   .in(file("modules/fs"))
@@ -149,9 +158,7 @@ lazy val jdbc = project
     name := "binny-jdbc",
     description := "Implementation backed by a SQL database using pure JDBC",
     libraryDependencies ++=
-      Dependencies.databases.map(_ % Test) ++
-        Dependencies.testContainers.map(_ % Test),
-    kindProjectorPlugin
+      Dependencies.databases.map(_ % Test)
   )
   .dependsOn(core % "compile->compile;test->test")
 
@@ -164,9 +171,7 @@ lazy val pglo = project
     name := "binny-pglo",
     description := "Implementation using PostgreSQLs LargeObject API",
     libraryDependencies ++=
-      Dependencies.postgres ++
-        Dependencies.testContainers.map(_ % Test),
-    kindProjectorPlugin
+      Dependencies.postgres
   )
   .dependsOn(core % "compile->compile;test->test", jdbc % "compile->compile;test->test")
 
@@ -180,28 +185,15 @@ lazy val minio = project
     description := "Implementation using the S3 API using MinIO SDK",
     libraryDependencies ++=
       Dependencies.minio ++
-        Dependencies.fs2io ++
-        Dependencies.testContainers.map(_ % Test)
+        Dependencies.fs2io
   )
   .dependsOn(core % "compile->compile;test->test")
-
-lazy val tikaDetect = project
-  .in(file("modules/tika-detect"))
-  .settings(sharedSettings)
-  .settings(testSettings)
-  .settings(scalafixSettings)
-  .settings(
-    name := "binny-tika-detect",
-    description := "Detect content types using Apache Tika",
-    libraryDependencies ++=
-      Dependencies.tikaCore
-  )
-  .dependsOn(core)
 
 lazy val microsite = project
   .in(file("modules/microsite"))
   .enablePlugins(MicrositesPlugin, MdocPlugin)
   .settings(sharedSettings)
+  .settings(scalafixSettings)
   .settings(noPublish)
   .settings(
     name := "binny-microsite",
@@ -222,7 +214,7 @@ lazy val microsite = project
     micrositeGitterChannel := false,
     micrositeShareOnSocial := false,
     run / fork := true,
-    scalacOptions := Seq(),
+    scalacOptions := Seq("-Ywarn-unused"),
     mdocVariables := Map(
       "VERSION" -> latestRelease.value
     ),
@@ -246,4 +238,4 @@ val root = project
     name := "binny-root",
     crossScalaVersions := Nil
   )
-  .aggregate(core, fs, jdbc, pglo, minio, tikaDetect)
+  .aggregate(core, fs, jdbc, pglo, minio, tikaDetect, microsite)

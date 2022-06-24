@@ -41,22 +41,55 @@ final case class ConnectionConfig(
         ds
     }
 
-  def setup[F[_]: Sync](dataTable: String, attrTable: String)(implicit
+  def setup[F[_]: Sync](dataTable: String)(implicit
       log: Logger[F]
   ): F[Int] =
     dbms match {
       case Dbms.PostgreSQL =>
-        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
+        DatabaseSetup.runData(Dbms.PostgreSQL, dataSource, dataTable)
 
       case Dbms.H2 =>
-        DatabaseSetup.runBoth(Dbms.PostgreSQL, dataSource, dataTable, attrTable)
+        DatabaseSetup.runData(Dbms.PostgreSQL, dataSource, dataTable)
 
       case Dbms.MariaDB =>
-        DatabaseSetup.runBoth(Dbms.MariaDB, dataSource, dataTable, attrTable)
+        DatabaseSetup.runData(Dbms.MariaDB, dataSource, dataTable)
     }
 }
 
 object ConnectionConfig {
+  object Postgres {
+    val testUrl =
+      sys.env.getOrElse(
+        "BINNY_CI_POSTGRES_URL",
+        "jdbc:postgresql://localhost:5455/binnyci"
+      )
+
+    val testUser =
+      sys.env.getOrElse("BINNY_CI_POSTGRESQL_USER", "binny")
+
+    val testPassword =
+      sys.env.getOrElse("BINNY_CI_POSTGRESQL_PASSWORD", "binny")
+
+    val default =
+      ConnectionConfig(testUrl, testUser, testPassword)
+  }
+
+  object MariaDB {
+    val testUrl =
+      sys.env.getOrElse(
+        "BINNY_CI_POSTGRES_URL",
+        "jdbc:mariadb://localhost:3308/binnyci"
+      )
+
+    val testUser =
+      sys.env.getOrElse("BINNY_CI_MARIADB_USER", "binny")
+
+    val testPassword =
+      sys.env.getOrElse("BINNY_CI_MARIADB_PASSWORD", "binny")
+
+    val default =
+      ConnectionConfig(testUrl, testUser, testPassword)
+  }
 
   def h2Memory(name: String) =
     ConnectionConfig(

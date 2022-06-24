@@ -10,7 +10,6 @@ object Dependencies {
   val mariaDbVersion = "3.0.5"
   val postgresVersion = "42.4.0"
   val slf4jVersion = "1.7.36"
-  val testContainersVersion = "0.40.8"
   val tikaVersion = "2.4.1"
   val icu4jVersion = "69.1"
   val kindProjectorVersion = "0.10.3"
@@ -28,12 +27,6 @@ object Dependencies {
 
   val tikaCore = Seq(
     "org.apache.tika" % "tika-core" % tikaVersion
-  )
-
-  val testContainers = Seq(
-    "com.dimafeng" %% "testcontainers-scala-munit" % testContainersVersion,
-    "com.dimafeng" %% "testcontainers-scala-mariadb" % testContainersVersion,
-    "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersVersion
   )
 
   val organizeImports = Seq(

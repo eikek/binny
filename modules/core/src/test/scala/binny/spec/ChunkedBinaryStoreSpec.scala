@@ -4,20 +4,20 @@ import binny._
 import cats.effect._
 import cats.syntax.all._
 
-abstract class ChunkedBinaryStoreSpec[S <: ChunkedBinaryStore[IO]]
-    extends BinaryStoreSpec[S] {
+trait ChunkedBinaryStoreSpec[S <: ChunkedBinaryStore[IO]] extends BinaryStoreSpec[S] {
 
   def computeAttr(id: BinaryId, store: S) =
     store
       .findBinary(id, ByteRange.All)
       .semiflatMap(
         _.through(
-          BinaryAttributes.compute(ContentTypeDetect.probeFileType, Hint.none)
+          ComputeAttr
+            .computeAll(ContentTypeDetect.probeFileType, Hint.filename("file.txt"))
         ).compile.lastOrError
       )
 
   test("insert chunks out of order") {
-    val store = binStore()
+    val store = binStore
     val chunks = ExampleData.file2M
       .chunkN(256 * 1024)
       .zipWithIndex
@@ -44,7 +44,7 @@ abstract class ChunkedBinaryStoreSpec[S <: ChunkedBinaryStore[IO]]
   }
 
   test("insert chunks out of order concurrently") {
-    val store = binStore()
+    val store = binStore
     val chunks = ExampleData.file2M
       .chunkN(256 * 1024)
       .zipWithIndex

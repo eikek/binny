@@ -8,7 +8,7 @@ import fs2.io.file.{Files, Path}
 class FsBinaryStoreTest extends BinaryStoreSpec[FsBinaryStore[IO]] {
   val logger = Logger.stdout[IO](Logger.Level.Warn, getClass.getSimpleName)
 
-  val binStore = ResourceSuiteLocalFixture(
+  val binStoreFixture = ResourceSuiteLocalFixture(
     "fs-store",
     for {
       dir <- Files[IO].tempDirectory(Some(Path("target")), "binny-fs-bs-", None)
@@ -16,5 +16,6 @@ class FsBinaryStoreTest extends BinaryStoreSpec[FsBinaryStore[IO]] {
     } yield store
   )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStoreFixture)
+  override def binStore = binStoreFixture()
 }

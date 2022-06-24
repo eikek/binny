@@ -2,31 +2,29 @@ package binny.spec
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import binny.Binary.Implicits._
+import binny.ExampleData._
 import binny._
 import binny.util.{Logger, Stopwatch}
-import cats.effect.IO
-import cats.implicits._
+import cats.effect._
+import cats.syntax.all._
 import fs2.{Chunk, Stream}
 import munit.CatsEffectSuite
 import scodec.bits.ByteVector
 
-abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
-    extends CatsEffectSuite
-    with StreamAssertion {
+trait BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite with StreamAssertion {
   private[this] val logger = Logger.stdout[IO](Logger.Level.Warn, getClass.getSimpleName)
 
-  val binStore: Fixture[S]
+  def binStore: S
 
-  val hint: Hint = Hint.none
+  val hintTxt: Hint = Hint.filename("file2M.txt")
   def noFileError: Binary[IO] = sys.error("No binary found")
 
   test("insert and load concurrently") {
-    val store = binStore()
+    val store = binStore
     for {
       ids <- Stream(ExampleData.file2M, ExampleData.helloWorld, ExampleData.logoPng)
         .covary[IO]
-        .parEvalMap(3)(data => data.through(store.insert(hint)).compile.lastOrError)
+        .parEvalMap(3)(data => data.through(store.insert).compile.lastOrError)
         .compile
         .toVector
 
@@ -36,11 +34,11 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
   }
 
   test("insert and load") {
-    val store = binStore()
+    val store = binStore
     Stream(ExampleData.helloWorld, Binary.empty, ExampleData.file2M.take(2203))
       .flatMap(data =>
         for {
-          id <- data.through(store.insert(hint))
+          id <- data.through(store.insert)
           bin <- Stream.eval(
             store
               .findBinary(id, ByteRange.All)
@@ -54,7 +52,7 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
   }
 
   test("load non existing id") {
-    val store = binStore()
+    val store = binStore
     for {
       id <- BinaryId.random[IO]
       file <- store.findBinary(id, ByteRange.All).value
@@ -62,22 +60,36 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
     } yield ()
   }
 
+  test("file exists") {
+    val store = binStore
+    for {
+      id0 <- IO(BinaryId("a1"))
+      id1 <- ExampleData.helloWorld[IO].through(store.insert).compile.lastOrError
+      ex0 <- store.exists(id0)
+      ex1 <- store.exists(id1)
+      _ = {
+        assert(!ex0)
+        assert(ex1)
+      }
+    } yield ()
+  }
+
   test("insert and load large file") {
-    val store = binStore()
+    val store = binStore
     (for {
       w <- Stream.eval(Stopwatch.start[IO])
-      id <- ExampleData.file2M.through(store.insert(hint))
+      id <- ExampleData.file2M.through(store.insert)
       bin <- Stream.eval(store.findBinary(id, ByteRange.All).getOrElse(noFileError))
-      attr <- bin.computeAttributes(ContentTypeDetect.none, hint)
+      attr <- bin.computeAttributes(ContentTypeDetect.probeFileType, hintTxt)
       _ = assertEquals(attr, ExampleData.file2MAttr)
       _ <- Stream.eval(Stopwatch.show(w)(d => logger.debug(s"Large file test took: $d")))
     } yield ()).compile.drain
   }
 
   test("load small range") {
-    val store = binStore()
+    val store = binStore
     (for {
-      id <- ExampleData.helloWorld[IO].through(store.insert(hint))
+      id <- ExampleData.helloWorld[IO].through(store.insert)
       bin <- Stream.eval(store.findBinary(id, ByteRange(2, 5)).getOrElse(noFileError))
       str <- Stream.eval(bin.readUtf8String)
       _ = assertEquals(str, "llo W")
@@ -85,31 +97,32 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
   }
 
   test("delete") {
-    val store = binStore()
+    val store = binStore
     (for {
-      id <- ExampleData.helloWorld[IO].through(store.insert(hint))
+      id <- ExampleData.helloWorld[IO].through(store.insert)
       _ <- Stream.eval(store.findBinary(id, ByteRange.All).getOrElse(noFileError))
       _ <- Stream.eval(store.delete(id))
+      _ <- Stream.eval(store.delete(BinaryId("non-existing")))
       res <- Stream.eval(store.findBinary(id, ByteRange.All).value)
       _ = assertEquals(res, None)
     } yield ()).compile.drain
   }
 
   test("failing stream") {
-    val store = binStore()
+    val store = binStore
     (for {
-      id <- ExampleData.fail.through(store.insert(hint)).attempt
+      id <- ExampleData.fail.through(store.insert).attempt
       _ = assert(id.isLeft)
     } yield ()).compile.drain
   }
 
   test("evaluate effects once") {
-    val store = binStore()
+    val store = binStore
     val exampleData = new BinaryStoreSpec.ChunkWithEffects(30, 15)
 
     for {
       id <- exampleData.stream
-        .through(store.insert(hint))
+        .through(store.insert)
         .compile
         .lastOrError
 
@@ -121,7 +134,7 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
   }
 
   test("listing binary ids") {
-    val store = binStore()
+    val store = binStore
 
     val id1 = BinaryId("abc123")
     val id2 = BinaryId("abc678")
@@ -131,7 +144,7 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
       id2 -> ExampleData.file2M,
       id3 -> ExampleData.helloWorld[IO]
     )
-      .flatMap { case (id, file) => file.through(store.insertWith(id, Hint.none)) }
+      .flatMap { case (id, file) => file.through(store.insertWith(id)) }
       .compile
       .drain
       .unsafeRunSync()
@@ -144,6 +157,29 @@ abstract class BinaryStoreSpec[S <: BinaryStore[IO]]
 
     val abcOnly = store.listIds(Some("abc"), 50).compile.toVector.unsafeRunSync()
     assertEquals(abcOnly.toSet, Set(id1, id2))
+  }
+
+  test("computeAttrs") {
+    val store = binStore
+    for {
+      id <- ExampleData.file2M.through(store.insert).compile.lastOrError
+      attrAll <- Clock[IO].timed(
+        store.computeAttr(id, hintTxt).run(AttributeName.all).value
+      )
+      attrNoSha <- store.computeAttr(id, hintTxt).run(AttributeName.excludeSha256).value
+      attrCt <- store.computeAttr(id, hintTxt).run(AttributeName.contentTypeOnly).value
+      _ = {
+        assertEquals(
+          attrCt.get.contentType,
+          ExampleData.file2MAttr.contentType
+        )
+        assertEquals(
+          attrNoSha.get.copy(sha256 = ExampleData.file2MAttr.sha256),
+          ExampleData.file2MAttr
+        )
+        assertEquals(attrAll._2.get, ExampleData.file2MAttr)
+      }
+    } yield ()
   }
 }
 

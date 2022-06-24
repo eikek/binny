@@ -7,11 +7,10 @@ permalink: jdbc
 
 # Generic JDBC
 
-This module provides a `BinaryStore` and `BinaryAttributeStore` using
-JDBC. It is tested for H2, PostgreSQL and MariaDB only, but other
-database systems probably work as well. The module doesn't include any
-JDBC driver, you need to pull in the one you want to use in your
-project.
+This module provides a `BinaryStore` using JDBC. It is tested for H2,
+PostgreSQL and MariaDB only, but other database systems probably work
+as well. The module doesn't include any JDBC driver, you need to pull
+in the one you want to use in your project.
 
 The approach is as follows: the byte stream is split in chunks (size
 can be configured) and each chunk is stored in a blob column and
@@ -69,8 +68,8 @@ For the examples here, an in-memory database
 ```scala mdoc
 import binny._
 import binny.util.Logger
-import binny.Binary.Implicits._
 import binny.jdbc._
+import binny.ExampleData._
 import cats.effect.IO
 import cats.effect.unsafe.implicits._
 
@@ -78,11 +77,11 @@ val dataSource = ConnectionConfig.h2Memory("docs").dataSource
 implicit val logger = Logger.silent[IO]
 val store = GenericJdbcStore.default[IO](dataSource, Logger.silent[IO])
 
-// creates the schema, the filenames are from the default config
-DatabaseSetup.runBoth[IO](Dbms.H2, dataSource, "file_chunk", "file_attr").unsafeRunSync()
+// creates the schema, the table name is same as in the default config
+DatabaseSetup.runData[IO](Dbms.H2, dataSource, "file_chunk").unsafeRunSync()
 
 val someData = ExampleData.file2M
-val id = someData.through(store.insert(Hint.filename("test.txt")))
+val id = someData.through(store.insert)
   .compile.lastOrError.unsafeRunSync()
 
 // get the file out
@@ -90,14 +89,6 @@ store.findBinary(id, ByteRange.All).getOrElse(sys.error("not found"))
   .flatMap(binary => binary.readUtf8String)
   .unsafeRunSync()
   .take(50)
-```
-
-The default setup also stores the attributes in the same database in a
-different table.
-
-```scala mdoc
-val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, dataSource, logger)
-attrStore.findAttr(id).getOrElse(sys.error("not found")).unsafeRunSync()
 ```
 
 
@@ -128,23 +119,3 @@ random order and the whole file is not available as complete stream.
 However, in order to use this the complete size of the file must be
 known up front. This is needed to know when the last chunk is
 received.
-
-## JdbcAttributeStore
-
-The `JdbcAttributeStore` can be used to store `BinaryAttributes` in
-the database. If your application uses a sql database, it might be
-useful to have the attributes in the database to build on it. The data
-can be stored somewhere else, if desired. The `JdbcAttributeStore` can
-be used with different `BinaryStore` implementations.
-
-Here is the table for storing attributes (PostgreSQL example):
-
-```sql
-CREATE TABLE IF NOT EXISTS "file_attr" (
-  "file_id" varchar(254) not null,
-  "sha256" varchar(254) not null,
-  "content_type" varchar(254) not null,
-  "length" bigint not null,
-  primary key ("file_id")
-)
-```

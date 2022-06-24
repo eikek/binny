@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio_binny
+    restart: unless-stopped
+    command: server /data
+    ports:
+      - "9182:9000"
+    environment:
+      - MINIO_ROOT_USER=binny
+      - MINIO_ROOT_PASSWORD=binnybinny
+
+  postgres:
+    image: postgres:14.3
+    container_name: postgres_binny
+    restart: unless-stopped
+    ports:
+      - "5455:5432"
+    environment:
+      - POSTGRES_USER=binny
+      - POSTGRES_PASSWORD=binny
+      - POSTGRES_DB=binnyci
+
+  mariadb:
+    image: mariadb:10.8
+    container_name: mariadb_binny
+    restart: unless-stopped
+    ports:
+      - "3308:3306"
+    environment:
+      MARIADB_USER: binny
+      MARIADB_PASSWORD: binny
+      MARIADB_ROOT_PASSWORD: superadmin
+      MARIADB_DATABASE: binnyci

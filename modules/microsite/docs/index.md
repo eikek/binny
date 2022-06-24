@@ -10,8 +10,12 @@ technologies:
 # Binny
 
 Binny is a Scala library for efficiently storing and retrieving
-(large) binary data from databases, providing a
-[FS2](https://github.com/functional-streams-for-scala/fs2) based api.
+(large) binary data from different storage systems, providing a
+unified, [FS2](https://github.com/functional-streams-for-scala/fs2)
+based api.
+
+It supports SQL databases via JDBC, PostgreSQLs large objects, S3
+compatible object storage and the filesystem.
 
 Binny is provided for Scala 2.13 and 3.
 
@@ -26,6 +30,7 @@ With [sbt](https://scala-sbt.org), add the dependencies:
 "com.github.eikek" %% "binny-jdbc" % "@VERSION@"  // implementation based on JDBC
 "com.github.eikek" %% "binny-pglo" % "@VERSION@"  // implementation based on PostgreSQLs LargeObject API
 "com.github.eikek" %% "binny-minio" % "@VERSION@"  // implementation for MinIO
+"com.github.eikek" %% "binny-tika-detect" % "@VERSION@"  // Content-Type detection with Apache Tika
 ```
 
 

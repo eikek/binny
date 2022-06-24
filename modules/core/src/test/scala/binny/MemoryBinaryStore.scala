@@ -1,26 +1,28 @@
 package binny
 
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.{Chunk, Pipe, Stream}
 import scodec.bits.ByteVector
 
-class MemoryBinaryStore[F[_]: Sync](data: Ref[F, Map[BinaryId, ByteVector]])
-    extends BinaryStore[F] {
+class MemoryBinaryStore[F[_]: Sync](
+    data: Ref[F, Map[BinaryId, ByteVector]],
+    detect: ContentTypeDetect = ContentTypeDetect.probeFileType
+) extends BinaryStore[F] {
 
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] = {
     val all = Stream.eval(data.get).flatMap(m => Stream.emits(m.keySet.toList))
     prefix.map(p => all.filter(id => id.id.startsWith(p))).getOrElse(all)
   }
 
-  def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
+  def insert: Pipe[F, Byte, BinaryId] =
     in =>
       Stream
         .eval(BinaryId.random[F])
-        .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
+        .flatMap(id => in.through(insertWith(id)) ++ Stream.emit(id))
 
-  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+  def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
     in => {
       val bytes = in.chunks.map(_.toByteVector).compile.fold(ByteVector.empty)(_ ++ _)
       Stream.eval(bytes.flatMap(bs => data.update(_.updated(id, bs)))).drain
@@ -43,6 +45,17 @@ class MemoryBinaryStore[F[_]: Sync](data: Ref[F, Map[BinaryId, ByteVector]])
 
   def delete(id: BinaryId): F[Unit] =
     data.update(_.removed(id))
+
+  def computeAttr(id: BinaryId, hint: Hint) = Kleisli { _ =>
+    OptionT(data.get.map(_.get(id)))
+      .map(bv =>
+        BinaryAttributes(
+          sha256 = bv.sha256,
+          contentType = detect.detect(bv, hint),
+          length = bv.length
+        )
+      )
+  }
 }
 
 object MemoryBinaryStore {

@@ -8,7 +8,7 @@ import binny.jdbc.impl.Implicits._
 import binny.jdbc.impl.{DataSourceResource, DbRunApi}
 import binny.util.RangeCalc.Offsets
 import binny.util.{Logger, RangeCalc, Stopwatch}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.{Chunk, Pipe, Stream}
@@ -20,52 +20,31 @@ object GenericJdbcStore {
   def apply[F[_]: Sync](
       ds: DataSource,
       logger: Logger[F],
-      config: JdbcStoreConfig,
-      attrStore: BinaryAttributeStore[F]
+      config: JdbcStoreConfig
   ): GenericJdbcStore[F] =
-    new Impl[F](ds, logger, config, attrStore)
-
-  def apply[F[_]: Sync](
-      ds: DataSource,
-      logger: Logger[F],
-      config: JdbcStoreConfig,
-      attrCfg: JdbcAttrConfig
-  ): GenericJdbcStore[F] =
-    new Impl[F](ds, logger, config, JdbcAttributeStore(attrCfg, ds, logger))
+    new Impl[F](ds, logger, config)
 
   def default[F[_]: Sync](ds: DataSource, logger: Logger[F]): GenericJdbcStore[F] =
-    apply(ds, logger, JdbcStoreConfig.default, JdbcAttrConfig.default)
+    apply(ds, logger, JdbcStoreConfig.default)
 
   // -- impl
 
   final private class Impl[F[_]: Sync](
       ds: DataSource,
       logger: Logger[F],
-      val config: JdbcStoreConfig,
-      attrStore: BinaryAttributeStore[F]
+      val config: JdbcStoreConfig
   ) extends GenericJdbcStore[F] {
 
     implicit private val log: Logger[F] = logger
     private[this] val dataApi = new DbRunApi[F](config.dataTable, logger)
 
-    private def saveAttr(id: BinaryId, hint: Hint) = {
-      val ba = dataApi.computeAttr(id, config.detect, hint).execute(ds)
-      for {
-        w <- Stopwatch.start[F]
-        _ <- attrStore.saveAttr(id, ba)
-        _ <- Stopwatch.show(w)(d =>
-          logger.debug(s"Computing and storing attributes for ${id.id} took $d")
-        )
-      } yield ()
-    }
-
-    def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
+    def insert: Pipe[F, Byte, BinaryId] =
       in =>
         Stream
           .eval(BinaryId.random)
-          .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
+          .flatMap(id => in.through(insertWith(id)) ++ Stream.emit(id))
 
-    def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+    def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
       bytes =>
         {
           val inserts =
@@ -79,7 +58,7 @@ object GenericJdbcStore {
           for {
             _ <- logger.s.debug(s"Inserting data for id ${id.id}")
             w <- Stream.eval(Stopwatch.start[F])
-            _ <- Stream.eval(inserts *> saveAttr(id, hint))
+            _ <- Stream.eval(inserts)
             _ <- Stream.eval(
               Stopwatch.show(w)(d => logger.debug(s"Inserting ${id.id} took $d"))
             )
@@ -106,12 +85,7 @@ object GenericJdbcStore {
             .execute(ds)
 
           logger.trace(s"Insert chunk ${ch.index + 1}/${ch.total} of size $len") *>
-            insert.flatTap {
-              case InsertChunkResult.Complete =>
-                saveAttr(id, hint)
-              case _ =>
-                ().pure[F]
-            }
+            insert
       }
 
     /** Finds a binary by its id. The data stream loads the bytes chunk-wise from the
@@ -188,28 +162,54 @@ object GenericJdbcStore {
       for {
         w <- Stopwatch.start[F]
         _ <- dataApi.delete(id).inTX.execute(ds)
-        _ <- attrStore.deleteAttr(id)
         _ <- Stopwatch.show(w)(d => logger.info(s"Deleting ${id.id} took $d"))
       } yield ()
 
-    def computeAttr(id: BinaryId, hint: Hint): OptionT[F, BinaryAttributes] = {
-      val attr =
-        dataApi
-          .exists(id)
-          .flatMap(_ =>
-            dataApi
-              .computeAttr(id, config.detect, hint)
-              .mapF(OptionT.liftF[F, BinaryAttributes])
-          )
+    def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
+      Kleisli { select =>
+        val attr =
+          select match {
+            case AttributeName.ContainsSha256(_) =>
+              dataApi
+                .exists(id)
+                .flatMap(_ =>
+                  dataApi
+                    .computeAttrAll(id, config.detect, hint)
+                    .mapF(OptionT.liftF[F, BinaryAttributes])
+                )
+            case AttributeName.ContainsLength(_) =>
+              dataApi
+                .exists(id)
+                .flatMap(_ =>
+                  dataApi
+                    .computeAttrLen(id)
+                    .flatMap(len =>
+                      dataApi
+                        .computeAttrDetect(id, config.detect, hint)
+                        .map(ct => BinaryAttributes(ct, len))
+                    )
+                    .mapF(OptionT.liftF[F, BinaryAttributes])
+                )
 
-      for {
-        w <- OptionT.liftF(Stopwatch.start[F])
-        a <- attr.execute(ds)
-        _ <- OptionT.liftF(
-          Stopwatch.show(w)(d => logger.debug(s"Computing attributes took: $d"))
-        )
-      } yield a
-    }
+            case _ =>
+              dataApi
+                .exists(id)
+                .flatMap(_ =>
+                  dataApi
+                    .computeAttrDetect(id, config.detect, hint)
+                    .map(ct => BinaryAttributes(ct, -1))
+                    .mapF(OptionT.liftF[F, BinaryAttributes])
+                )
+          }
+
+        for {
+          w <- OptionT.liftF(Stopwatch.start[F])
+          a <- attr.execute(ds)
+          _ <- OptionT.liftF(
+            Stopwatch.show(w)(d => logger.debug(s"Computing attributes took: $d"))
+          )
+        } yield a
+      }
 
     def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] =
       dataApi.listAllIds(prefix, chunkSize, ds)

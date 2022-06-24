@@ -1,6 +1,5 @@
 package binny
 
-import binny.Binary.Implicits._
 import cats.effect._
 import fs2.Stream
 import scodec.bits.ByteVector
@@ -27,7 +26,7 @@ object ExampleData {
       ByteVector.fromValidHex(
         "f69322b62de9c0196cf858a8c023a0cb21171fcfc34bb757137bfbf9953a4b2e"
       ),
-      SimpleContentType.octetStream,
+      SimpleContentType.textPlain,
       1978876L
     )
 
@@ -42,4 +41,13 @@ object ExampleData {
 
   private def binaryFail: Binary[IO] =
     Stream.eval(IO(sys.error("error!!")))
+
+  implicit class StreamExtras(self: Stream[IO, Byte]) {
+    def computeAttributes(detect: ContentTypeDetect, hint: Hint) =
+      self.through(ComputeAttr.computeAll(detect, hint))
+
+    def readUtf8String =
+      self.through(fs2.text.utf8.decode).compile.string
+
+  }
 }

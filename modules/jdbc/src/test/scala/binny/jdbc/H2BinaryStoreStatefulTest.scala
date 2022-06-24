@@ -8,7 +8,7 @@ import cats.effect._
 class H2BinaryStoreStatefulTest extends BinaryStoreSpec[BinaryStore[IO]] with DbFixtures {
   val logger = Logger.stdout[IO](Logger.Level.Off, getClass.getSimpleName)
 
-  val binStore: Fixture[BinaryStore[IO]] =
+  val binStoreFixture: Fixture[BinaryStore[IO]] =
     ResourceSuiteLocalFixture(
       "h2-store",
       Resource.pure(
@@ -23,5 +23,7 @@ class H2BinaryStoreStatefulTest extends BinaryStoreSpec[BinaryStore[IO]] with Db
       )
     )
 
-  override def munitFixtures: Seq[Fixture[_]] = List(binStore)
+  override def munitFixtures: Seq[Fixture[_]] = List(binStoreFixture)
+
+  override def binStore = binStoreFixture()
 }

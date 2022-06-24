@@ -2,7 +2,7 @@ package binny.fs
 
 import binny._
 import binny.util.{Logger, Stopwatch}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.implicits._
 import fs2.Pipe
@@ -11,41 +11,52 @@ import fs2.io.file.{Files, Path}
 
 final class FsBinaryStore[F[_]: Async](
     val config: FsStoreConfig,
-    logger: Logger[F],
-    attrStore: BinaryAttributeStore[F]
+    logger: Logger[F]
 ) extends BinaryStore[F] {
-  def insert(hint: Hint): Pipe[F, Byte, BinaryId] =
+  def insert: Pipe[F, Byte, BinaryId] =
     in =>
       Stream
         .eval(BinaryId.random)
-        .flatMap(id => in.through(insertWith(id, hint)) ++ Stream.emit(id))
+        .flatMap(id => in.through(insertWith(id)) ++ Stream.emit(id))
 
-  def insertWith(id: BinaryId, hint: Hint): Pipe[F, Byte, Nothing] =
+  def insertWith(id: BinaryId): Pipe[F, Byte, Nothing] =
     bytes =>
       {
         val target = config.targetFile(id)
 
-        // tried with .observe to consume the stream once, but it took 5x longer
-        val attr = Files[F]
-          .readAll(target)
-          .through(BinaryAttributes.compute(config.detect, hint))
-          .compile
-          .lastOrError
-
         val storeFile =
-          bytes.through(Impl.write[F](target, config.overwriteMode)) ++ Stream.eval(
-            attrStore.saveAttr(id, attr)
-          )
+          bytes.through(Impl.write[F](target, config.overwriteMode))
 
         for {
           _ <- logger.s.debug(s"Insert file with id ${id.id}")
           w <- Stream.eval(Stopwatch.start[F])
-          _ <- storeFile
-          _ <- Stream.eval(
+          _ <- storeFile ++ Stream.eval(
             Stopwatch.show(w)(d => logger.debug(s"Inserting file ${id.id} took $d"))
           )
         } yield ()
       }.drain
+
+  def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
+    Kleisli { select =>
+      val file = config.targetFile(id)
+      OptionT.liftF(Files[F].exists(file)).filter(identity).as(select).semiflatMap {
+        case AttributeName.ContainsSha256(_) =>
+          Files[F]
+            .readAll(config.targetFile(id))
+            .through(ComputeAttr.computeAll(config.detect, hint))
+            .compile
+            .lastOrError
+
+        case AttributeName.ContainsLength(_) =>
+          val length = Files[F].size(file)
+          val ct = Impl.detectContentType(file, config.detect, hint)
+          (ct, length).mapN(BinaryAttributes.apply)
+
+        case _ =>
+          val ct = Impl.detectContentType(file, config.detect, hint)
+          ct.map(ctype => BinaryAttributes.empty.copy(contentType = ctype))
+      }
+    }
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val target = config.targetFile(id)
@@ -59,7 +70,7 @@ final class FsBinaryStore[F[_]: Async](
 
   def delete(id: BinaryId): F[Unit] = {
     val target = config.targetFile(id)
-    attrStore.deleteAttr(id) *> Impl.delete[F](target).map(_ => ())
+    Impl.delete[F](target).map(_ => ())
   }
 
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] = {
@@ -75,20 +86,16 @@ final class FsBinaryStore[F[_]: Async](
 object FsBinaryStore {
   def apply[F[_]: Async](
       config: FsStoreConfig,
-      logger: Logger[F],
-      attrStore: BinaryAttributeStore[F]
+      logger: Logger[F]
   ): FsBinaryStore[F] =
-    new FsBinaryStore[F](config, logger, attrStore)
+    new FsBinaryStore[F](config, logger)
 
   def apply[F[_]: Async](
       logger: Logger[F],
-      storeCfg: FsStoreConfig,
-      attrCfg: FsAttrConfig
-  ): FsBinaryStore[F] = {
-    val attrStore = FsAttributeStore(attrCfg)
-    new FsBinaryStore[F](storeCfg, logger, attrStore)
-  }
+      storeCfg: FsStoreConfig
+  ): FsBinaryStore[F] =
+    new FsBinaryStore[F](storeCfg, logger)
 
   def default[F[_]: Async](logger: Logger[F], baseDir: Path): FsBinaryStore[F] =
-    apply(logger, FsStoreConfig.default(baseDir), FsAttrConfig.default(baseDir))
+    apply(logger, FsStoreConfig.default(baseDir))
 }

@@ -27,14 +27,14 @@ class DbRunTest extends CatsEffectSuite with DbFixtures {
   dataSource.test("hasNext on non-empty table") { ds =>
     val v =
       for {
-        _ <- DatabaseSetup.runAttr[IO](Dbms.PostgreSQL, ds, "attrs")
+        _ <- DatabaseSetup.runData[IO](Dbms.PostgreSQL, ds, "file_chunk")
         _ <- DbRun
           .executeUpdate[IO](
-            "INSERT INTO attrs (file_id,sha256,content_type,length) VALUES ('a', 'b', 'c', 0)"
+            "INSERT INTO file_chunk (file_id,chunk_nr,chunk_len,chunk_data) VALUES ('a', 0, 1, 'x')"
           )
           .execute(ds)
         v <- DbRun
-          .query[IO]("SELECT * FROM attrs")(_ => ())
+          .query[IO]("SELECT * FROM file_chunk")(_ => ())
           .use(rs => DbRun.hasNext[IO](rs))
           .execute(ds)
       } yield v
@@ -45,17 +45,17 @@ class DbRunTest extends CatsEffectSuite with DbFixtures {
     val txBody = for {
       _ <- DbRun
         .executeUpdate[IO](
-          "INSERT INTO attrs (file_id,sha256,content_type,length) VALUES ('a', 'b', 'c', 0)"
+          "INSERT INTO file_chunk (file_id,chunk_nr,chunk_len,chunk_data) VALUES ('a', 0, 1, 'x')"
         )
       _ <- DbRun.fail[IO, Unit](new Exception("Oops!"))
     } yield ()
 
     val v =
       for {
-        _ <- DatabaseSetup.runAttr[IO](Dbms.PostgreSQL, ds, "attrs")
+        _ <- DatabaseSetup.runData[IO](Dbms.PostgreSQL, ds, "file_chunk")
         _ <- txBody.inTX.attempt.execute(ds)
         v <- DbRun
-          .query[IO]("SELECT * FROM attrs")(_ => ())
+          .query[IO]("SELECT * FROM file_chunk")(_ => ())
           .use(rs => DbRun.hasNext[IO](rs))
           .execute(ds)
       } yield v

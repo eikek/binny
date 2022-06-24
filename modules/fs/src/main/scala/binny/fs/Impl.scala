@@ -59,11 +59,21 @@ private[fs] object Impl {
         None
     })
 
+  def detectContentType[F[_]: Async](file: Path, detect: ContentTypeDetect, hint: Hint) =
+    load(file, ByteRange.Chunk(0, 50), 50)
+      .semiflatMap(_.through(detect.detectStream(hint)).compile.lastOrError)
+      .getOrElse(SimpleContentType.octetStream)
+
   def delete[F[_]: Async](targetFile: Path): F[Boolean] =
     Files[F].deleteIfExists(targetFile)
 
   def deleteDir[F[_]: Async](dir: Path): F[Unit] =
-    Files[F].deleteRecursively(dir)
+    Files[F].exists(dir).flatMap {
+      case true =>
+        Files[F].deleteRecursively(dir)
+      case false =>
+        ().pure[F]
+    }
 
   def writeAttrs[F[_]: Async](file: Path, attrs: BinaryAttributes): F[Unit] =
     (Stream
@@ -99,4 +109,9 @@ private[fs] object Impl {
 
   def loadAll[F[_]: Sync](file: Path): F[Array[Byte]] =
     Sync[F].blocking(NioFiles.readAllBytes(file.toNioPath))
+
+  def loadInto[F[_]: Sync](file: Path, buffer: Array[Byte]) = Sync[F].blocking {
+    val in = NioFiles.newInputStream(file.toNioPath)
+    in.read(buffer)
+  }
 }

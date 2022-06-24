@@ -34,7 +34,6 @@ object CopyTool {
   def copyAll[F[_]: Async](
       logger: Logger[F],
       from: BinaryStore[F],
-      fromMeta: BinaryAttributeStore[F],
       to: BinaryStore[F],
       chunkSize: Int,
       maxConcurrent: Int
@@ -49,10 +48,10 @@ object CopyTool {
     val copied =
       if (maxConcurrent > 1)
         allIds
-          .parEvalMap(maxConcurrent)(id => copyFile(id, from, fromMeta, to, logger))
+          .parEvalMap(maxConcurrent)(id => copyFile(id, from, to, logger))
       else
         allIds
-          .evalMap(id => copyFile(id, from, fromMeta, to, logger))
+          .evalMap(id => copyFile(id, from, to, logger))
 
     for {
       w <- Stopwatch.start[F]
@@ -69,7 +68,6 @@ object CopyTool {
   def copyFile[F[_]: Sync](
       id: BinaryId,
       from: BinaryStore[F],
-      fromMeta: BinaryAttributeStore[F],
       to: BinaryStore[F],
       logger: Logger[F]
   ): F[Counter] =
@@ -80,20 +78,14 @@ object CopyTool {
         from
           .findBinary(id, ByteRange.All)
           .semiflatMap(data =>
-            fromMeta
-              .findAttr(id)
-              .map(attrs => Hint(None, attrs.contentType.contentType.some))
-              .getOrElse(Hint.none)
-              .flatMap(hint =>
-                logger.trace(s"Copying ${id.id} …") *>
-                  data.through(to.insertWith(id, hint)).compile.drain.attempt.flatMap {
-                    case Right(()) => Counter.success.pure[F]
-                    case Left(ex) =>
-                      logger
-                        .error(ex)(s"Error storing file '$id'")
-                        .as(Counter.failed(id))
-                  }
-              )
+            logger.trace(s"Copying ${id.id} …") *>
+              data.through(to.insertWith(id)).compile.drain.attempt.flatMap {
+                case Right(()) => Counter.success.pure[F]
+                case Left(ex) =>
+                  logger
+                    .error(ex)(s"Error storing file '$id'")
+                    .as(Counter.failed(id))
+              }
           )
           .getOrElse(Counter.notFound)
     }

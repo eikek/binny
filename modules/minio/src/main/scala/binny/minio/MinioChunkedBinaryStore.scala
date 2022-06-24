@@ -3,7 +3,7 @@ package binny.minio
 import binny._
 import binny.util.RangeCalc.Offsets
 import binny.util.{Logger, RangeCalc, StreamUtil}
-import cats.data.OptionT
+import cats.data.{Kleisli, OptionT}
 import cats.effect._
 import cats.syntax.all._
 import fs2.{Pipe, Stream}
@@ -13,7 +13,6 @@ import scodec.bits.ByteVector
 final class MinioChunkedBinaryStore[F[_]: Async](
     val config: MinioConfig,
     private[minio] val client: MinioAsyncClient,
-    attrStore: BinaryAttributeStore[F],
     logger: Logger[F]
 ) extends ChunkedBinaryStore[F] {
   private[this] val minio = new Minio[F](client)
@@ -26,7 +25,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
   )
 
   private[this] val minioStore =
-    MinioBinaryStore[F](config.withKeyMapping(keyMapping), client, attrStore, logger)
+    MinioBinaryStore[F](config.withKeyMapping(keyMapping), client, logger)
 
   def insertChunk(
       id: BinaryId,
@@ -41,7 +40,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         val s3Key =
           config.keyMapping.makeS3Key(id).changeObjectName(n => objectName(n, ch.index))
         val insert =
-          minio.uploadObject(s3Key, config.partSize, config.detect, hint, data)
+          minio.uploadObject(s3Key, config.partSize, config.detect, data)
 
         val checkComplete =
           listChunks(id, max = 100).compile.count
@@ -56,17 +55,40 @@ final class MinioChunkedBinaryStore[F[_]: Async](
           )
           _ <- insert
           r <- checkComplete
-          _ <-
-            if (r == InsertChunkResult.Complete)
-              attrStore.saveAttr(id, computeAttr(id, hint))
-            else ().pure[F]
         } yield r
     }
 
-  private def computeAttr(id: BinaryId, hint: Hint): F[BinaryAttributes] =
-    findBinary(id, ByteRange.All)
-      .flatMapF(_.through(BinaryAttributes.compute(config.detect, hint)).compile.last)
-      .getOrElse(BinaryAttributes.empty)
+  def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] = Kleisli { select =>
+    val first = keyMapping.makeS3Key(id)
+    OptionT(minio.statObject(first).attempt.map(_.toOption)).semiflatMap { stat =>
+      select match {
+        case AttributeName.ContainsSha256(_) =>
+          generateS3Keys(id, Offsets.none)
+            .map(_._1)
+            .through(loadChunkFiles)
+            .through(ComputeAttr.computeAll(config.detect, hint))
+            .compile
+            .last
+            .map(_.getOrElse(BinaryAttributes.empty))
+
+        case AttributeName.ContainsLength(_) =>
+          val len =
+            generateS3Keys(id, Offsets.none)
+              .map(_._1)
+              .evalMap(key => minio.statObject(key).attempt.map(_.toOption))
+              .unNoneTerminate
+              .compile
+              .fold(0L)(_ + _.size())
+
+          (minio.detectContentType(first, stat.some, config.detect, hint), len)
+            .mapN(BinaryAttributes.apply)
+        case _ =>
+          minio
+            .detectContentType(first, stat.some, config.detect, hint)
+            .map(c => BinaryAttributes(c, -1L))
+      }
+    }
+  }
 
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] =
     Stream.eval(logger.info(s"List ids with filter: $prefix")) *>
@@ -76,11 +98,9 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         .flatMap(bucket => minio.listObjects(bucket, None, 100, prefix))
         .map(idFromObjectName)
 
-  def insert(hint: Hint) =
-    minioStore.insert(hint)
+  def insert = minioStore.insert
 
-  def insertWith(id: BinaryId, hint: Hint) =
-    minioStore.insertWith(id, hint)
+  def insertWith(id: BinaryId) = minioStore.insertWith(id)
 
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val list = listChunks(id, max = 2).take(2).compile.toList
@@ -93,36 +113,35 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         val offsets = RangeCalc.calcOffset(range, config.chunkSize)
         val allChunks = generateS3Keys(id, offsets)
         if (offsets.isNone) {
-          val contents =
-            allChunks
-              .map(_._1)
-              .evalMap(s3Key =>
-                minio.getObjectAsStreamOption(s3Key, config.chunkSize, ByteRange.All)
-              )
-              .unNoneTerminate
-              .flatten
-
-          OptionT.pure(contents)
+          OptionT.pure(allChunks.map(_._1).through(loadChunkFiles))
         } else {
           OptionT.pure(
             allChunks
-              .evalMap { case (s3Key, index) =>
+              .flatMap { case (s3Key, index) =>
                 RangeCalc.chopOffsets(offsets, index.toInt) match {
                   case (Some(start), Some(end)) =>
                     val br = ByteRange.Chunk(start, start + end)
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
 
                   case (Some(start), None) =>
                     val br = ByteRange.Chunk(start, Int.MaxValue)
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
 
                   case (None, Some(end)) =>
                     val br = ByteRange.Chunk(0, end)
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
 
                   case (None, None) =>
                     val br = ByteRange.All
-                    minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    Stream.eval(
+                      minio.getObjectAsStreamOption(s3Key, config.chunkSize, br)
+                    )
                 }
               }
               .unNoneTerminate
@@ -134,7 +153,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
 
   def exists(id: BinaryId): F[Boolean] = {
     val key = keyMapping.makeS3Key(id)
-    minio.statObject(key)
+    minio.exists(key)
   }
 
   def delete(id: BinaryId): F[Unit] = {
@@ -170,6 +189,13 @@ final class MinioChunkedBinaryStore[F[_]: Async](
         .through(makeS3Key(id))
         .through(StreamUtil.zipWithIndexFrom(offsets.firstChunk))
 
+  private def loadChunkFiles: Pipe[F, S3Key, Byte] =
+    _.flatMap(s3Key =>
+      Stream.eval(
+        minio.getObjectAsStreamOption(s3Key, config.chunkSize, ByteRange.All)
+      )
+    ).unNoneTerminate.flatten
+
   private def objectName(key: String, n: Int): String = f"$key/chunk_$n%08d"
 
   private def idFromObjectName(name: String): BinaryId = {
@@ -186,14 +212,12 @@ object MinioChunkedBinaryStore {
   def apply[F[_]: Async](
       config: MinioConfig,
       client: MinioAsyncClient,
-      attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioChunkedBinaryStore[F] =
-    new MinioChunkedBinaryStore[F](config, client, attrStore, logger)
+    new MinioChunkedBinaryStore[F](config, client, logger)
 
   def apply[F[_]: Async](
       config: MinioConfig,
-      attrStore: BinaryAttributeStore[F],
       logger: Logger[F]
   ): MinioChunkedBinaryStore[F] =
     new MinioChunkedBinaryStore[F](
@@ -203,7 +227,6 @@ object MinioChunkedBinaryStore {
         .endpoint(config.endpoint)
         .credentials(config.accessKey, config.secretKey)
         .build(),
-      attrStore,
       logger
     )
 }

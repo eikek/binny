@@ -9,9 +9,6 @@ options:
       - title: BinaryStore
         url: core/binarystore
 
-      - title: BinaryAttributesStore
-        url: core/attrstore
-
       - title: ChunkedBinaryStore
         url: core/chunkedstore
 

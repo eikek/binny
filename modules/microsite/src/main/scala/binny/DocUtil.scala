@@ -2,12 +2,11 @@ package binny
 
 import binny.minio._
 import cats.effect._
-import com.dimafeng.testcontainers.{GenericContainer, PostgreSQLContainer}
 import fs2.Stream
 import fs2.io.file.{Files, Path}
-import org.testcontainers.utility.DockerImageName
 
 object DocUtil {
+  val minioConfig: MinioConfig = MinioTestCfg.default("docs")
 
   def directoryContent(path: Path, level: Int = 0): Stream[IO, String] =
     Stream.eval(indent(path, level)) ++ Files[IO].list(path).flatMap { child =>
@@ -43,17 +42,4 @@ object DocUtil {
 
   def tempDir: Resource[IO, Path] =
     Files[IO].tempDirectory(None, "binny-docs-", None)
-
-  def startPostgresContainer: Resource[IO, PostgreSQLContainer] = {
-    def create = {
-      val cnt = PostgreSQLContainer(DockerImageName.parse("postgres:13"))
-      cnt.start()
-      cnt
-    }
-    Resource.make(IO(create))(cnt => IO(cnt.stop()))
-  }
-
-  def startMinIOContainer: Resource[IO, MinioContainer] =
-    Resource
-      .make(IO(new MinioContainer.Def().start()))(cnt => IO(cnt.stop()))
 }

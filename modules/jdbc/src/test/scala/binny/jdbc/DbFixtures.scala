@@ -2,9 +2,10 @@ package binny.jdbc
 
 import javax.sql.DataSource
 
+import binny.jdbc.impl.CreateDataTable
+import binny.jdbc.impl.Implicits._
 import binny.util.Logger
 import cats.effect.IO
-import com.dimafeng.testcontainers.JdbcDatabaseContainer
 import munit.CatsEffectSuite
 
 trait DbFixtures { self: CatsEffectSuite =>
@@ -23,61 +24,30 @@ trait DbFixtures { self: CatsEffectSuite =>
   ): GenericJdbcStore[IO] = {
     implicit val log: Logger[IO] = logger
     val ds = ConnectionConfig.h2Memory(db.replaceAll("\\s+", "_")).dataSource
-    val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
-    val store = GenericJdbcStore[IO](ds, logger, config, attrStore)
+    val store = GenericJdbcStore[IO](ds, logger, config)
     if (createSchema) {
       DatabaseSetup
-        .runBoth[IO](Dbms.PostgreSQL, ds, config.dataTable, JdbcAttrConfig.default.table)
+        .runData[IO](Dbms.PostgreSQL, ds, config.dataTable)
         .unsafeRunSync()
     }
     store
   }
 
-  def h2AttrStore(
-      db: String,
-      logger: Logger[IO],
-      cfg: JdbcAttrConfig
-  ): JdbcAttributeStore[IO] = {
-    val ds = ConnectionConfig.h2Memory(db.replaceAll("\\s+", "_")).dataSource
-    val store = JdbcAttributeStore[IO](cfg, ds, logger)
-    store.runSetup(Dbms.H2).unsafeRunSync()
-    store
-  }
-
-  def makeAttrStore(
-      cnt: JdbcDatabaseContainer,
-      logger: Logger[IO],
-      cfg: JdbcAttrConfig
-  ): JdbcAttributeStore[IO] = {
-    val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val ds = cc.dataSource
-    implicit val log: Logger[IO] = logger
-    DatabaseSetup
-      .runAttr[IO](Dbms.unsafeFromJdbcUrl(cnt.jdbcUrl), ds, cfg.table)
-      .unsafeRunSync()
-    JdbcAttributeStore(cfg, ds, logger)
-  }
-
   def makeBinStore(
-      cnt: JdbcDatabaseContainer,
+      connectionConfig: ConnectionConfig,
       logger: Logger[IO],
       cfg: JdbcStoreConfig,
       createSchema: Boolean
   ): GenericJdbcStore[IO] = {
     implicit val log: Logger[IO] = logger
 
-    val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val ds = cc.dataSource
-    val attrStore = JdbcAttributeStore(JdbcAttrConfig.default, ds, logger)
-    val store = GenericJdbcStore[IO](cc.dataSource, logger, cfg, attrStore)
+    val store = GenericJdbcStore[IO](connectionConfig.dataSource, logger, cfg)
     if (createSchema) {
-      DatabaseSetup
-        .runBoth[IO](
-          Dbms.unsafeFromJdbcUrl(cnt.jdbcUrl),
-          cc.dataSource,
-          cfg.dataTable,
-          JdbcAttrConfig.default.table
-        )
+      val dbms = Dbms.unsafeFromJdbcUrl(connectionConfig.url)
+      val dd = CreateDataTable[IO](cfg.dataTable)
+      dd.createData(dbms)
+        .flatMap(_ => dd.truncate)
+        .execute(connectionConfig.dataSource)
         .unsafeRunSync()
     }
     store
