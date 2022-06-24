@@ -2,9 +2,10 @@ package binny.jdbc
 
 import javax.sql.DataSource
 
+import binny.jdbc.impl.CreateDataTable
+import binny.jdbc.impl.Implicits._
 import binny.util.Logger
 import cats.effect.IO
-import com.dimafeng.testcontainers.JdbcDatabaseContainer
 import munit.CatsEffectSuite
 
 trait DbFixtures { self: CatsEffectSuite =>
@@ -33,22 +34,20 @@ trait DbFixtures { self: CatsEffectSuite =>
   }
 
   def makeBinStore(
-      cnt: JdbcDatabaseContainer,
+      connectionConfig: ConnectionConfig,
       logger: Logger[IO],
       cfg: JdbcStoreConfig,
       createSchema: Boolean
   ): GenericJdbcStore[IO] = {
     implicit val log: Logger[IO] = logger
 
-    val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
-    val store = GenericJdbcStore[IO](cc.dataSource, logger, cfg)
+    val store = GenericJdbcStore[IO](connectionConfig.dataSource, logger, cfg)
     if (createSchema) {
-      DatabaseSetup
-        .runData[IO](
-          Dbms.unsafeFromJdbcUrl(cnt.jdbcUrl),
-          cc.dataSource,
-          cfg.dataTable
-        )
+      val dbms = Dbms.unsafeFromJdbcUrl(connectionConfig.url)
+      val dd = CreateDataTable[IO](cfg.dataTable)
+      dd.createData(dbms)
+        .flatMap(_ => dd.truncate)
+        .execute(connectionConfig.dataSource)
         .unsafeRunSync()
     }
     store

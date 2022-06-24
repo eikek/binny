@@ -11,21 +11,13 @@ class MinioBinaryStoreTest
     .getLogger(classOf[okhttp3.OkHttpClient].getName)
     .setLevel(java.util.logging.Level.FINE);
 
-  override val containerDef: MinioContainer.Def = new MinioContainer.Def
-
-  // As soon as two test classes use the minio container, things get scary
-  override def afterContainersStart(containers: MinioContainer): Unit =
-    Thread.sleep(200)
-
   val testContext: Fixture[TestContext[MinioBinaryStore[IO]]] =
     ResourceSuiteLocalFixture(
       "minio-store",
       Resource
-        .make(IO(containerDef.start()))(cnt => IO(cnt.stop()))
-        .evalMap(cnt =>
+        .eval(
           TestContext(
-            cnt,
-            S3KeyMapping.constant("testing"),
+            "store-testing",
             (cfg, client) => MinioBinaryStore(cfg, client, logger)
           )
         )

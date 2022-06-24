@@ -3,19 +3,10 @@ package binny.minio
 import binny._
 import binny.util.Logger
 import cats.effect._
-import com.dimafeng.testcontainers.munit.TestContainerForAll
 import io.minio.GetObjectArgs
 import munit.CatsEffectSuite
 
-abstract class AbstractMinioTest[S <: BinaryStore[IO]]
-    extends CatsEffectSuite
-    with TestContainerForAll {
-
-  override val containerDef: MinioContainer.Def = new MinioContainer.Def
-
-  // As soon as two test classes use the minio container, things get scary
-  override def afterContainersStart(containers: MinioContainer): Unit =
-    Thread.sleep(200)
+abstract class AbstractMinioTest[S <: BinaryStore[IO]] extends CatsEffectSuite {
 
   val logger = Logger.stdout[IO](Logger.Level.Off, getClass.getSimpleName)
 

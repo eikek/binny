@@ -57,6 +57,39 @@ final case class ConnectionConfig(
 }
 
 object ConnectionConfig {
+  object Postgres {
+    val testUrl =
+      sys.env.getOrElse(
+        "BINNY_CI_POSTGRES_URL",
+        "jdbc:postgresql://localhost:5455/binnyci"
+      )
+
+    val testUser =
+      sys.env.getOrElse("BINNY_CI_POSTGRESQL_USER", "binny")
+
+    val testPassword =
+      sys.env.getOrElse("BINNY_CI_POSTGRESQL_PASSWORD", "binny")
+
+    val default =
+      ConnectionConfig(testUrl, testUser, testPassword)
+  }
+
+  object MariaDB {
+    val testUrl =
+      sys.env.getOrElse(
+        "BINNY_CI_POSTGRES_URL",
+        "jdbc:mariadb://localhost:3308/binnyci"
+      )
+
+    val testUser =
+      sys.env.getOrElse("BINNY_CI_MARIADB_USER", "binny")
+
+    val testPassword =
+      sys.env.getOrElse("BINNY_CI_MARIADB_PASSWORD", "binny")
+
+    val default =
+      ConnectionConfig(testUrl, testUser, testPassword)
+  }
 
   def h2Memory(name: String) =
     ConnectionConfig(

@@ -158,8 +158,7 @@ lazy val jdbc = project
     name := "binny-jdbc",
     description := "Implementation backed by a SQL database using pure JDBC",
     libraryDependencies ++=
-      Dependencies.databases.map(_ % Test) ++
-        Dependencies.testContainers.map(_ % Test)
+      Dependencies.databases.map(_ % Test)
   )
   .dependsOn(core % "compile->compile;test->test")
 
@@ -172,8 +171,7 @@ lazy val pglo = project
     name := "binny-pglo",
     description := "Implementation using PostgreSQLs LargeObject API",
     libraryDependencies ++=
-      Dependencies.postgres ++
-        Dependencies.testContainers.map(_ % Test)
+      Dependencies.postgres
   )
   .dependsOn(core % "compile->compile;test->test", jdbc % "compile->compile;test->test")
 
@@ -187,8 +185,7 @@ lazy val minio = project
     description := "Implementation using the S3 API using MinIO SDK",
     libraryDependencies ++=
       Dependencies.minio ++
-        Dependencies.fs2io ++
-        Dependencies.testContainers.map(_ % Test)
+        Dependencies.fs2io
   )
   .dependsOn(core % "compile->compile;test->test")
 

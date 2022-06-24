@@ -28,6 +28,11 @@ final class PgApi[F[_]: Sync](table: String, logger: Logger[F]) {
          |""".stripMargin
     )
 
+  def truncateTable: DbRun[F, Int] =
+    DbRun.executeUpdate(
+      s"""TRUNCATE $table"""
+    )
+
   def listAllIds(
       prefix: Option[String],
       chunkSize: Int,

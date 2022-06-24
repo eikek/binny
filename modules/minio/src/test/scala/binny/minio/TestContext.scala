@@ -23,17 +23,11 @@ case class TestContext[S <: BinaryStore[IO]](
 object TestContext {
 
   def apply[S <: BinaryStore[IO]](
-      cnt: MinioContainer,
-      keyMapping: S3KeyMapping,
+      bucket: String,
       create: (MinioConfig, MinioAsyncClient) => S
   ): IO[TestContext[S]] = IO {
-    val client = MinioAsyncClient
-      .builder()
-      .endpoint(cnt.endpoint)
-      .credentials(cnt.accessKey, cnt.secretKey)
-      .build()
-
-    val cfg = cnt.createConfig(keyMapping)
+    val client = MinioTestCfg.client
+    val cfg = MinioTestCfg.default(bucket)
     TestContext(client, cfg, create)
   }
 }

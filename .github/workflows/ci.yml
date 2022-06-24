@@ -15,10 +15,17 @@ jobs:
       - uses: olafurpg/setup-scala@v13
         with:
           java-version: ${{ matrix.java }}
+
+      - name: Start databases
+        run: docker compose -f ci/docker-compose.yml up -d
+
       - name: Coursier cache
         uses: coursier/cache-action@v6
       - name: sbt ci ${{ github.ref }}
         run: sbt ci
+
+      - name: Stop databases
+        run: docker compose -f ci/docker-compose.yml down
   ci:
     runs-on: ubuntu-22.04
     needs: [ci-matrix]

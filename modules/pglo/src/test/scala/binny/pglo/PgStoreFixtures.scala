@@ -1,22 +1,25 @@
 package binny.pglo
 
 import binny.jdbc._
+import binny.jdbc.impl.Implicits._
+import binny.pglo.impl.PgApi
 import binny.util.Logger
 import cats.effect._
 import cats.effect.unsafe.implicits._
-import com.dimafeng.testcontainers.JdbcDatabaseContainer
 
 trait PgStoreFixtures {
 
   def makeBinStore(
-      cnt: JdbcDatabaseContainer,
       logger: Logger[IO],
       cfg: PgLoConfig
   ): PgLoBinaryStore[IO] = {
-    val cc = ConnectionConfig(cnt.jdbcUrl, cnt.username, cnt.password)
+    val cc = ConnectionConfig.Postgres.default
     val ds = cc.dataSource
     val store = PgLoBinaryStore[IO](cfg, logger, cc.dataSource)
-    PgSetup.run[IO](cfg.table, logger, ds).unsafeRunSync()
+
+    val pg = new PgApi[IO](cfg.table, logger)
+    pg.createTable.flatMap(_ => pg.truncateTable).execute(ds).unsafeRunSync()
+
     store
   }
 }
