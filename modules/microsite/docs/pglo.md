@@ -52,15 +52,11 @@ import cats.effect.unsafe.implicits._
 implicit val logger = Logger.silent[IO]
 
 val someData = ExampleData.file2M
-
+val ds = ConnectionConfig.Postgres.default.dataSource
+val store = PgLoBinaryStore.default[IO](logger, ds)
 val run =
   for {
-    // start a postgres container and create a DataSource that connects to it
-    postgres <- Stream.resource(DocUtil.startPostgresContainer)
-    ds = ConnectionConfig(postgres.jdbcUrl, postgres.username, postgres.password).dataSource
-
-    // Create the `BinaryStore` and the schema
-    store = PgLoBinaryStore.default[IO](logger, ds)
+    // Create the schema
     _ <- Stream.eval(PgSetup.run[IO](store.config.table, logger, ds))
 
     // insert some data

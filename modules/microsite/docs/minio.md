@@ -42,16 +42,11 @@ import cats.effect.unsafe.implicits._
 val logger = Logger.silent[IO]
 val someData = ExampleData.file2M
 
+// Create the `BinaryStore`
+val store = MinioBinaryStore[IO](DocUtil.minioConfig, logger)
 
 val run =
   for {
-    // start a MiniO container, which can create a valid config
-    minio <- Stream.resource(DocUtil.startMinIOContainer)
-    config: MinioConfig = minio.createConfig(S3KeyMapping.constant("docs-bucket"))
-
-    // Create the `BinaryStore`
-    store = MinioBinaryStore[IO](config, logger)
-
     // insert some data
     id <- someData.through(store.insert)
 

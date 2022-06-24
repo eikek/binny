@@ -193,6 +193,7 @@ lazy val microsite = project
   .in(file("modules/microsite"))
   .enablePlugins(MicrositesPlugin, MdocPlugin)
   .settings(sharedSettings)
+  .settings(scalafixSettings)
   .settings(noPublish)
   .settings(
     name := "binny-microsite",
@@ -213,7 +214,7 @@ lazy val microsite = project
     micrositeGitterChannel := false,
     micrositeShareOnSocial := false,
     run / fork := true,
-    scalacOptions := Seq(),
+    scalacOptions := Seq("-Ywarn-unused"),
     mdocVariables := Map(
       "VERSION" -> latestRelease.value
     ),
@@ -237,4 +238,4 @@ val root = project
     name := "binny-root",
     crossScalaVersions := Nil
   )
-  .aggregate(core, fs, jdbc, pglo, minio, tikaDetect)
+  .aggregate(core, fs, jdbc, pglo, minio, tikaDetect, microsite)
