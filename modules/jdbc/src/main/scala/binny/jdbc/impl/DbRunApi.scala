@@ -169,6 +169,12 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
       ps.setString(1, id.id)
     }
 
+  def deleteChunk(id: BinaryId, chunkNr: Int): DbRun[F, Int] =
+    DbRun.update(s"DELETE FROM $table WHERE file_id = ? and chunk_nr = ?") { ps =>
+      ps.setString(1, id.id)
+      ps.setInt(2, chunkNr)
+    }
+
   def queryChunk(id: BinaryId, chunkNr: Int): DbRun[F, Option[Chunk[Byte]]] =
     DbRun
       .query(s"SELECT chunk_data FROM $table WHERE file_id = ? AND chunk_nr = ?") { ps =>

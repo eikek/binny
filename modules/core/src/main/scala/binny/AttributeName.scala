@@ -21,34 +21,34 @@ object AttributeName {
   implicit val order: Order[AttributeName] =
     Order.by(_.name)
 
-  val lengthOnly: NonEmptySet[AttributeName] =
+  val lengthOnly: AttributeNameSet =
     select(Length)
 
-  val contentTypeOnly: NonEmptySet[AttributeName] =
+  val contentTypeOnly: AttributeNameSet =
     select(ContentType)
 
-  val sha256Only: NonEmptySet[AttributeName] =
+  val sha256Only: AttributeNameSet =
     select(Sha256)
 
-  val all: NonEmptySet[AttributeName] =
+  val all: AttributeNameSet =
     select(Length, Sha256, ContentType)
 
-  val excludeSha256: NonEmptySet[AttributeName] =
+  val excludeSha256: AttributeNameSet =
     select(Length, ContentType)
 
-  def select(ba: AttributeName, bas: AttributeName*): NonEmptySet[AttributeName] =
+  def select(ba: AttributeName, bas: AttributeName*): AttributeNameSet =
     NonEmptySet.of(ba, bas: _*)
 
   object ContainsSha256 {
-    def unapply(set: NonEmptySet[AttributeName]): Option[Sha256.type] =
+    def unapply(set: AttributeNameSet): Option[Sha256.type] =
       Some(Sha256).filter(set.contains)
   }
   object ContainsLength {
-    def unapply(set: NonEmptySet[AttributeName]): Option[Length.type] =
+    def unapply(set: AttributeNameSet): Option[Length.type] =
       Some(Length).filter(set.contains)
   }
   object ContentTypeOnly {
-    def unapply(set: NonEmptySet[AttributeName]): Option[ContentType.type] =
+    def unapply(set: AttributeNameSet): Option[ContentType.type] =
       if (set == contentTypeOnly) Some(ContentType) else None
   }
 }

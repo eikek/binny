@@ -161,8 +161,18 @@ object GenericJdbcStore {
     def delete(id: BinaryId): F[Unit] =
       for {
         w <- Stopwatch.start[F]
-        _ <- dataApi.delete(id).inTX.execute(ds)
-        _ <- Stopwatch.show(w)(d => logger.info(s"Deleting ${id.id} took $d"))
+
+        // When deleting large files, doing it in one transaction may blow memory.
+        r <- Stream
+          .iterate(0)(_ + 1)
+          .evalMap(n => dataApi.deleteChunk(id, n).execute(ds))
+          .takeWhile(_ > 0)
+          .compile
+          .foldMonoid
+
+        _ <- Stopwatch.show(w)(d =>
+          logger.info(s"Deleting $r chunks of ${id.id} took $d")
+        )
       } yield ()
 
     def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
