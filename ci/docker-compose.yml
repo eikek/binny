@@ -13,7 +13,7 @@ services:
       - MINIO_ROOT_PASSWORD=binnybinny
 
   postgres:
-    image: postgres:14.3
+    image: postgres:14.7
     container_name: postgres_binny
     restart: unless-stopped
     ports:
