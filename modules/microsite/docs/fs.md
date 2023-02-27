@@ -91,3 +91,13 @@ just one chunk file - same as `FsBinaryStore` does.
 However, in order to use this the complete size of the file must be
 known up front. This is needed to know when the last chunk is
 received.
+
+## FsBinaryStoreWithCleanup
+
+The `FsBinaryStoreWithCleanup` is a wrapper around a `FsBinaryStore`
+that upon deletion of a file also removes all empty directories until
+its base path. Depending on which `PathMapping` is used, deleting a
+file could leave empty directories behind. The reason for this default
+behavior is so inserting and deleting are independent as they won't
+write into same subdirectories. The `FsBinaryStoreWithCleanup` makes
+sure that inserting and deleting happen interleaved.

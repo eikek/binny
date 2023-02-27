@@ -47,6 +47,8 @@ trait Logger[F[_]] { self =>
 }
 
 object Logger {
+  def apply[F[_]](implicit ev: Logger[F]): Logger[F] = ev
+
   sealed trait Level {
     def asInt: Int
   }

@@ -70,7 +70,8 @@ final class FsBinaryStore[F[_]: Async](
 
   def delete(id: BinaryId): F[Unit] = {
     val target = config.targetFile(id)
-    Impl.delete[F](target).map(_ => ())
+    logger.debug(s"Deleting file with id: ${id.id}") *>
+      Impl.delete[F](target).map(_ => ())
   }
 
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] = {
