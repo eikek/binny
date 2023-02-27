@@ -14,10 +14,10 @@ import scodec.bits.ByteVector
   * concatenated.
   */
 class FsChunkedBinaryStore[F[_]: Async](
-    cfg: FsChunkedStoreConfig,
+    val config: FsChunkedStoreConfig,
     logger: Logger[F]
 ) extends ChunkedBinaryStore[F] {
-  private val fsStore = FsBinaryStore[F](cfg.toStoreConfig, logger)
+  private val fsStore = FsBinaryStore[F](config.toStoreConfig, logger)
 
   override def insertChunk(
       id: BinaryId,
@@ -25,20 +25,20 @@ class FsChunkedBinaryStore[F[_]: Async](
       hint: Hint,
       data: ByteVector
   ): F[InsertChunkResult] =
-    InsertChunkResult.validateChunk(chunkDef, cfg.chunkSize, data.length.toInt) match {
+    InsertChunkResult.validateChunk(chunkDef, config.chunkSize, data.length.toInt) match {
       case Some(bad) => bad.pure[F]
       case None =>
-        val ch = chunkDef.fold(identity, _.toTotal(cfg.chunkSize))
+        val ch = chunkDef.fold(identity, _.toTotal(config.chunkSize))
         val chunkFileName = FsChunkedBinaryStore.fileName(ch.index)
-        val file = cfg.targetDir(id) / chunkFileName
+        val file = config.targetDir(id) / chunkFileName
         val insert = Stream
           .chunk(Chunk.byteVector(data))
-          .through(Impl.write(file, cfg.overwriteMode))
+          .through(Impl.write(file, config.overwriteMode))
           .compile
           .drain
 
         val checkComplete = Files[F]
-          .list(cfg.targetDir(id))
+          .list(config.targetDir(id))
           .compile
           .count
           .map(chunks =>
@@ -58,13 +58,13 @@ class FsChunkedBinaryStore[F[_]: Async](
   def computeAttr(id: BinaryId, hint: Hint): ComputeAttr[F] =
     Kleisli { select =>
       val chunk0 = makeFile(id, 0)
-      val ct = Impl.detectContentType(chunk0, cfg.detect, hint)
+      val ct = Impl.detectContentType(chunk0, config.detect, hint)
       OptionT.liftF(exists(id)).filter(identity).as(select).semiflatMap {
         case AttributeName.ContainsSha256(_) =>
           listChunkFiles(id, Offsets.none)
             .map(_._1)
-            .flatMap(p => Files[F].readAll(p, cfg.readChunkSize, Flags.Read))
-            .through(ComputeAttr.computeAll(cfg.detect, hint))
+            .flatMap(p => Files[F].readAll(p, config.readChunkSize, Flags.Read))
+            .through(ComputeAttr.computeAll(config.detect, hint))
             .compile
             .lastOrError
 
@@ -92,12 +92,12 @@ class FsChunkedBinaryStore[F[_]: Async](
         fsStore.findBinary(id, range)
 
       case _ =>
-        val offsets = RangeCalc.calcOffset(range, cfg.chunkSize)
+        val offsets = RangeCalc.calcOffset(range, config.chunkSize)
         val allChunks = listChunkFiles(id, offsets)
         if (offsets.isNone) {
           val contents = allChunks
             .map(_._1)
-            .flatMap(p => Files[F].readAll(p, cfg.readChunkSize, Flags.Read))
+            .flatMap(p => Files[F].readAll(p, config.readChunkSize, Flags.Read))
           OptionT.pure(contents)
         } else {
           OptionT.pure(
@@ -108,21 +108,21 @@ class FsChunkedBinaryStore[F[_]: Async](
                     Files[F]
                       .readRange(
                         chunkFile,
-                        cfg.readChunkSize,
+                        config.readChunkSize,
                         start.toLong,
                         (start + end).toLong
                       )
                   case (Some(start), None) =>
                     Files[F].readRange(
                       chunkFile,
-                      cfg.readChunkSize,
+                      config.readChunkSize,
                       start.toLong,
                       Long.MaxValue
                     )
                   case (None, Some(end)) =>
-                    Files[F].readRange(chunkFile, cfg.readChunkSize, 0, end.toLong)
+                    Files[F].readRange(chunkFile, config.readChunkSize, 0, end.toLong)
                   case (None, None) =>
-                    Files[F].readAll(chunkFile, cfg.readChunkSize, Flags.Read)
+                    Files[F].readAll(chunkFile, config.readChunkSize, Flags.Read)
                 }
               }
           )
@@ -132,11 +132,11 @@ class FsChunkedBinaryStore[F[_]: Async](
 
   def listIds(prefix: Option[String], chunkSize: Int): Stream[F, BinaryId] = {
     val firstChunkName = FsChunkedBinaryStore.fileName(0)
-    val directoryDepth = cfg.targetDirDepth
+    val directoryDepth = config.targetDirDepth
     val all = Files[F]
-      .walk(cfg.baseDir, directoryDepth, followLinks = false)
+      .walk(config.baseDir, directoryDepth, followLinks = false)
       .evalFilter(p => Files[F].isRegularFile(p / firstChunkName))
-      .mapFilter(p => cfg.mapping.idFromDir(p))
+      .mapFilter(p => config.mapping.idFromDir(p))
 
     prefix.map(p => all.filter(_.id.startsWith(p))).getOrElse(all)
   }
@@ -149,12 +149,12 @@ class FsChunkedBinaryStore[F[_]: Async](
     listChunkFiles(id, Offsets.oneChunk).take(1).compile.last.map(_.isDefined)
 
   def delete(id: BinaryId): F[Unit] = {
-    val target = cfg.targetDir(id)
+    val target = config.targetDir(id)
     Impl.deleteDir[F](target)
   }
 
   private def makeFile(id: BinaryId, chunkIndex: Int) =
-    cfg.targetDir(id) / FsChunkedBinaryStore.fileName(chunkIndex)
+    config.targetDir(id) / FsChunkedBinaryStore.fileName(chunkIndex)
 
   private def takeWhileExists(files: Stream[F, Path]): Stream[F, Path] =
     files
