@@ -1,10 +1,9 @@
-<!DOCTYPE html><html><head><title>Binny: JDBC</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="eikek" /><meta name="description" content="Binny – Scala library for files in databases" /><meta name="og:image" content="/binny/img/poster.png" /><meta name="image" property="og:image" content="/binny/img/poster.png" /><meta name="og:title" content="Binny: JDBC" /><meta name="title" property="og:title" content="Binny: JDBC" /><meta name="og:site_name" content="Binny" /><meta name="og:url" content="https://github.com/eikek/binny" /><meta name="og:type" content="website" /><meta name="og:description" content="Binny – Scala library for files in databases" /><link rel="icon" type="image/png" href="/binny/img/favicon.png" /><meta name="twitter:title" content="Binny: JDBC" /><meta name="twitter:image" content="/binny/img/poster.png" /><meta name="twitter:description" content="Binny – Scala library for files in databases" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="35x35" href="/binny/img/favicon.png" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/binny/highlight/styles/vs.css" /><link rel="stylesheet" href="/binny/css/light-style.css" /></head><body class="docs"><div id="wrapper"><div id="sidebar-wrapper"><div id="sidebar-brand"><a href="/binny/" class="brand"><div class="brand-wrapper"></div><span>Binny</span></a><button id="main-toggle" class="sidebar-toggle"><span class="close"></span></button></div><div class="sidebar-nav"> <div class="sidebar-nav-item  "><a href="/binny/index" title="Home" class="">Home</a></div> <div class="sidebar-nav-item  "><a href="/binny/core" title="Core Api" class="drop-nested">Core Api</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/core/binarystore" title="BinaryStore" class="">BinaryStore</a> <a href="/binny/core/attrstore" title="BinaryAttributesStore" class="">BinaryAttributesStore</a> <a href="/binny/core/chunkedstore" title="ChunkedBinaryStore" class="">ChunkedBinaryStore</a> <a href="/binny/core/detect" title="ContentTypeDetect" class="">ContentTypeDetect</a></div></div> <div class="sidebar-nav-item  open"><a href="/binny/impls" title="Implementation Modules" class="drop-nested">Implementation Modules</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/fs" title="Filesystem" class="">Filesystem</a> <a href="/binny/jdbc" title="JDBC" class="active">JDBC</a> <a href="/binny/pglo" title="PG LargeObject" class="">PG LargeObject</a> <a href="/binny/minio" title="MinIO" class="">MinIO</a></div></div></div></div><div id="page-content-wrapper"><div class="nav"><div class="container-fluid"><div class="row"><div class="col-lg-12"><div class="action-menu pull-left clearfix"><a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars" aria-hidden="true"></i></a></div><ul class="pull-right"><li class="search-nav"><div id="search-dropdown"><label><i class="fa fa-search"></i>Search</label><input id="search-bar" type="text" placeholder="Enter keywords here..." onclick="displayToggleSearch(event)" /><ul id="search-dropdown-content" class="dropdown dropdown-content"></ul></div></li><li id="gh-eyes-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-eye"></i><span>Watchers<span id="eyes" class="label label-default">--</span></span></a></li><li id="gh-stars-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-star-o"></i><span>Stars<span id="stars" class="label label-default">--</span></span></a></li></ul></div></div></div></div><div id="content" data-github-owner="eikek" data-github-repo="binny"><div class="content-wrapper"><section><h1 id="generic-jdbc">Generic JDBC</h1>
+<!DOCTYPE html><html><head><title>Binny: JDBC</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="eikek" /><meta name="description" content="Binny – Scala library for files in databases" /><meta name="og:image" content="/binny/img/poster.png" /><meta name="image" property="og:image" content="/binny/img/poster.png" /><meta name="og:title" content="Binny: JDBC" /><meta name="title" property="og:title" content="Binny: JDBC" /><meta name="og:site_name" content="Binny" /><meta name="og:url" content="https://github.com/eikek/binny" /><meta name="og:type" content="website" /><meta name="og:description" content="Binny – Scala library for files in databases" /><link rel="icon" type="image/png" href="/binny/img/favicon.png" /><meta name="twitter:title" content="Binny: JDBC" /><meta name="twitter:image" content="/binny/img/poster.png" /><meta name="twitter:description" content="Binny – Scala library for files in databases" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="35x35" href="/binny/img/favicon.png" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/binny/highlight/styles/vs.css" /><link rel="stylesheet" href="/binny/css/light-style.css" /></head><body class="docs"><div id="wrapper"><div id="sidebar-wrapper"><div id="sidebar-brand"><a href="/binny/" class="brand"><div class="brand-wrapper"></div><span>Binny</span></a><button id="main-toggle" class="sidebar-toggle"><span class="close"></span></button></div><div class="sidebar-nav"> <div class="sidebar-nav-item  "><a href="/binny/index" title="Home" class="">Home</a></div> <div class="sidebar-nav-item  "><a href="/binny/core" title="Core Api" class="drop-nested">Core Api</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/core/binarystore" title="BinaryStore" class="">BinaryStore</a> <a href="/binny/core/chunkedstore" title="ChunkedBinaryStore" class="">ChunkedBinaryStore</a> <a href="/binny/core/detect" title="ContentTypeDetect" class="">ContentTypeDetect</a></div></div> <div class="sidebar-nav-item  open"><a href="/binny/impls" title="Implementation Modules" class="drop-nested">Implementation Modules</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/binny/fs" title="Filesystem" class="">Filesystem</a> <a href="/binny/jdbc" title="JDBC" class="active">JDBC</a> <a href="/binny/pglo" title="PG LargeObject" class="">PG LargeObject</a> <a href="/binny/minio" title="MinIO" class="">MinIO</a></div></div></div></div><div id="page-content-wrapper"><div class="nav"><div class="container-fluid"><div class="row"><div class="col-lg-12"><div class="action-menu pull-left clearfix"><a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars" aria-hidden="true"></i></a></div><ul class="pull-right"><li class="search-nav"><div id="search-dropdown"><label><i class="fa fa-search"></i>Search</label><input id="search-bar" type="text" placeholder="Enter keywords here..." onclick="displayToggleSearch(event)" /><ul id="search-dropdown-content" class="dropdown dropdown-content"></ul></div></li><li id="gh-eyes-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-eye"></i><span>Watchers<span id="eyes" class="label label-default">--</span></span></a></li><li id="gh-stars-item" class="hidden-xs to-uppercase"><a href="https://github.com/eikek/binny" target="_blank" rel="noopener noreferrer"><i class="fa fa-star-o"></i><span>Stars<span id="stars" class="label label-default">--</span></span></a></li></ul></div></div></div></div><div id="content" data-github-owner="eikek" data-github-repo="binny"><div class="content-wrapper"><section><h1 id="generic-jdbc">Generic JDBC</h1>
 
-<p>This module provides a <code class="language-plaintext highlighter-rouge">BinaryStore</code> and <code class="language-plaintext highlighter-rouge">BinaryAttributeStore</code> using
-JDBC. It is tested for H2, PostgreSQL and MariaDB only, but other
-database systems probably work as well. The module doesn’t include any
-JDBC driver, you need to pull in the one you want to use in your
-project.</p>
+<p>This module provides a <code class="language-plaintext highlighter-rouge">BinaryStore</code> using JDBC. It is tested for H2,
+PostgreSQL and MariaDB only, but other database systems probably work
+as well. The module doesn’t include any JDBC driver, you need to pull
+in the one you want to use in your project.</p>
 
 <p>The approach is as follows: the byte stream is split in chunks (size
 can be configured) and each chunk is stored in a blob column and
@@ -58,27 +57,27 @@ defines some settings, like the table name and chunk size to use.</p>
 
 <div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">binny._</span>
 <span class="k">import</span> <span class="nn">binny.util.Logger</span>
-<span class="k">import</span> <span class="nn">binny.Binary.Implicits._</span>
 <span class="k">import</span> <span class="nn">binny.jdbc._</span>
+<span class="k">import</span> <span class="nn">binny.ExampleData._</span>
 <span class="k">import</span> <span class="nn">cats.effect.IO</span>
 <span class="k">import</span> <span class="nn">cats.effect.unsafe.implicits._</span>
 
 <span class="k">val</span> <span class="nv">dataSource</span> <span class="k">=</span> <span class="nv">ConnectionConfig</span><span class="o">.</span><span class="py">h2Memory</span><span class="o">(</span><span class="s">"docs"</span><span class="o">).</span><span class="py">dataSource</span>
 <span class="c1">// dataSource: javax.sql.DataSource = ds0: url=jdbc:h2:mem:docs;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1 user=sa</span>
 <span class="k">implicit</span> <span class="k">val</span> <span class="nv">logger</span> <span class="k">=</span> <span class="nv">Logger</span><span class="o">.</span><span class="py">silent</span><span class="o">[</span><span class="kt">IO</span><span class="o">]</span>
-<span class="c1">// logger: Logger[IO] = binny.util.Logger$$anon$2@518e6d6c</span>
+<span class="c1">// logger: Logger[IO] = binny.util.Logger$$anon$2@214738c1</span>
 <span class="k">val</span> <span class="nv">store</span> <span class="k">=</span> <span class="nv">GenericJdbcStore</span><span class="o">.</span><span class="py">default</span><span class="o">[</span><span class="kt">IO</span><span class="o">](</span><span class="n">dataSource</span><span class="o">,</span> <span class="nv">Logger</span><span class="o">.</span><span class="py">silent</span><span class="o">[</span><span class="kt">IO</span><span class="o">])</span>
-<span class="c1">// store: GenericJdbcStore[IO] = binny.jdbc.GenericJdbcStore$Impl@280fa441</span>
+<span class="c1">// store: GenericJdbcStore[IO] = binny.jdbc.GenericJdbcStore$Impl@623dc959</span>
 
-<span class="c1">// creates the schema, the filenames are from the default config</span>
-<span class="nv">DatabaseSetup</span><span class="o">.</span><span class="py">runBoth</span><span class="o">[</span><span class="kt">IO</span><span class="o">](</span><span class="nv">Dbms</span><span class="o">.</span><span class="py">H2</span><span class="o">,</span> <span class="n">dataSource</span><span class="o">,</span> <span class="s">"file_chunk"</span><span class="o">,</span> <span class="s">"file_attr"</span><span class="o">).</span><span class="py">unsafeRunSync</span><span class="o">()</span>
+<span class="c1">// creates the schema, the table name is same as in the default config</span>
+<span class="nv">DatabaseSetup</span><span class="o">.</span><span class="py">runData</span><span class="o">[</span><span class="kt">IO</span><span class="o">](</span><span class="nv">Dbms</span><span class="o">.</span><span class="py">H2</span><span class="o">,</span> <span class="n">dataSource</span><span class="o">,</span> <span class="s">"file_chunk"</span><span class="o">).</span><span class="py">unsafeRunSync</span><span class="o">()</span>
 <span class="c1">// res0: Int = 0</span>
 
 <span class="k">val</span> <span class="nv">someData</span> <span class="k">=</span> <span class="nv">ExampleData</span><span class="o">.</span><span class="py">file2M</span>
 <span class="c1">// someData: Binary[IO] = Stream(..)</span>
-<span class="k">val</span> <span class="nv">id</span> <span class="k">=</span> <span class="nv">someData</span><span class="o">.</span><span class="py">through</span><span class="o">(</span><span class="nv">store</span><span class="o">.</span><span class="py">insert</span><span class="o">(</span><span class="nv">Hint</span><span class="o">.</span><span class="py">filename</span><span class="o">(</span><span class="s">"test.txt"</span><span class="o">)))</span>
+<span class="k">val</span> <span class="nv">id</span> <span class="k">=</span> <span class="nv">someData</span><span class="o">.</span><span class="py">through</span><span class="o">(</span><span class="nv">store</span><span class="o">.</span><span class="py">insert</span><span class="o">)</span>
   <span class="o">.</span><span class="py">compile</span><span class="o">.</span><span class="py">lastOrError</span><span class="o">.</span><span class="py">unsafeRunSync</span><span class="o">()</span>
-<span class="c1">// id: BinaryId = BinaryId(AyK8HsFYYhrZ3h6L1HGCxJNTqZCwZVAZNYigTHbeVDUa)</span>
+<span class="c1">// id: BinaryId = BinaryId(6sGMZvEh897uHvTTrcTDBAp5vFN39mMHqmZN6USqgqX6)</span>
 
 <span class="c1">// get the file out</span>
 <span class="nv">store</span><span class="o">.</span><span class="py">findBinary</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="nv">ByteRange</span><span class="o">.</span><span class="py">All</span><span class="o">).</span><span class="py">getOrElse</span><span class="o">(</span><span class="nv">sys</span><span class="o">.</span><span class="py">error</span><span class="o">(</span><span class="s">"not found"</span><span class="o">))</span>
@@ -89,25 +88,6 @@ defines some settings, like the table name and chunk size to use.</p>
 <span class="c1">// hello world 2</span>
 <span class="c1">// hello world 3</span>
 <span class="c1">// hello wo"""</span>
-</code></pre></div></div>
-
-<p>The default setup also stores the attributes in the same database in a
-different table.</p>
-
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">val</span> <span class="nv">attrStore</span> <span class="k">=</span> <span class="nc">JdbcAttributeStore</span><span class="o">(</span><span class="nv">JdbcAttrConfig</span><span class="o">.</span><span class="py">default</span><span class="o">,</span> <span class="n">dataSource</span><span class="o">,</span> <span class="n">logger</span><span class="o">)</span>
-<span class="c1">// attrStore: JdbcAttributeStore[IO[A]] = binny.jdbc.JdbcAttributeStore@79a68d4e</span>
-<span class="nv">attrStore</span><span class="o">.</span><span class="py">findAttr</span><span class="o">(</span><span class="n">id</span><span class="o">).</span><span class="py">getOrElse</span><span class="o">(</span><span class="nv">sys</span><span class="o">.</span><span class="py">error</span><span class="o">(</span><span class="s">"not found"</span><span class="o">)).</span><span class="py">unsafeRunSync</span><span class="o">()</span>
-<span class="c1">// res2: BinaryAttributes = BinaryAttributes(</span>
-<span class="c1">//   sha256 = Chunk(</span>
-<span class="c1">//     bytes = View(</span>
-<span class="c1">//       at = scodec.bits.ByteVector$AtArray@73f83bff,</span>
-<span class="c1">//       offset = 0L,</span>
-<span class="c1">//       size = 32L</span>
-<span class="c1">//     )</span>
-<span class="c1">//   ),</span>
-<span class="c1">//   contentType = SimpleContentType(text/plain),</span>
-<span class="c1">//   length = 1978876L</span>
-<span class="c1">// )</span>
 </code></pre></div></div>
 
 <h2 id="jdbcbinarystore">JdbcBinaryStore</h2>
@@ -137,25 +117,6 @@ random order and the whole file is not available as complete stream.</p>
 <p>However, in order to use this the complete size of the file must be
 known up front. This is needed to know when the last chunk is
 received.</p>
-
-<h2 id="jdbcattributestore">JdbcAttributeStore</h2>
-
-<p>The <code class="language-plaintext highlighter-rouge">JdbcAttributeStore</code> can be used to store <code class="language-plaintext highlighter-rouge">BinaryAttributes</code> in
-the database. If your application uses a sql database, it might be
-useful to have the attributes in the database to build on it. The data
-can be stored somewhere else, if desired. The <code class="language-plaintext highlighter-rouge">JdbcAttributeStore</code> can
-be used with different <code class="language-plaintext highlighter-rouge">BinaryStore</code> implementations.</p>
-
-<p>Here is the table for storing attributes (PostgreSQL example):</p>
-
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="nv">"file_attr"</span> <span class="p">(</span>
-  <span class="nv">"file_id"</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">254</span><span class="p">)</span> <span class="k">not</span> <span class="k">null</span><span class="p">,</span>
-  <span class="nv">"sha256"</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">254</span><span class="p">)</span> <span class="k">not</span> <span class="k">null</span><span class="p">,</span>
-  <span class="nv">"content_type"</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">254</span><span class="p">)</span> <span class="k">not</span> <span class="k">null</span><span class="p">,</span>
-  <span class="nv">"length"</span> <span class="nb">bigint</span> <span class="k">not</span> <span class="k">null</span><span class="p">,</span>
-  <span class="k">primary</span> <span class="k">key</span> <span class="p">(</span><span class="nv">"file_id"</span><span class="p">)</span>
-<span class="p">)</span>
-</code></pre></div></div>
 </section></div></div></div></div><script src="/binny/highlight/highlight.pack.js"></script><script src="/binny/lunr/lunr.js"></script><script>
 // For all code blocks, copy the language from the containing div
 // to the inner code tag (where hljs expects it to be)
