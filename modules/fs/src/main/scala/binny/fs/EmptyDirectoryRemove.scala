@@ -9,12 +9,13 @@ import fs2.Stream
 import fs2.io.file.{Files, NoSuchFileException, Path}
 
 final class EmptyDirectoryRemove[F[_]: Files: Sync](
-    val config: FsStoreConfig,
+    val baseDir: Path,
+    targetFile: BinaryId => Path,
     logger: Logger[F]
 ) {
 
   def removeEmptyDirs(id: BinaryId): F[Unit] = {
-    val file = config.targetFile(id)
+    val file = targetFile(id)
     dirsToRemove(file)
       .evalMap(p => isEmptyDirectory(p).map(Dir(p, _)))
       .takeWhile(_.isEmpty)
@@ -40,8 +41,8 @@ final class EmptyDirectoryRemove[F[_]: Files: Sync](
 
   private def dirsToRemove(dir: Path): Stream[F, Path] =
     parentStream(dir.some)
-      .filter(_.startsWith(config.baseDir))
-      .filter(_ != config.baseDir)
+      .filter(_.startsWith(baseDir))
+      .filter(_ != baseDir)
       .evalFilter(Files[F].isDirectory)
 
   private def parentStream(dir: Option[Path]): Stream[F, Path] =
@@ -51,6 +52,15 @@ final class EmptyDirectoryRemove[F[_]: Files: Sync](
     }
 }
 
-private object EmptyDirectoryRemove {
-  case class Dir(path: Path, isEmpty: Boolean)
+object EmptyDirectoryRemove {
+
+  def apply[F[_]: Files: Sync: Logger](config: FsStoreConfig): EmptyDirectoryRemove[F] =
+    new EmptyDirectoryRemove[F](config.baseDir, config.targetFile, Logger[F])
+
+  def apply[F[_]: Files: Sync: Logger](
+      config: FsChunkedStoreConfig
+  ): EmptyDirectoryRemove[F] =
+    new EmptyDirectoryRemove[F](config.baseDir, config.targetDir, Logger[F])
+
+  private case class Dir(path: Path, isEmpty: Boolean)
 }

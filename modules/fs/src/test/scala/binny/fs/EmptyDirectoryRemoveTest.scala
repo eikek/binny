@@ -21,9 +21,8 @@ class EmptyDirectoryRemoveTest extends CatsEffectSuite {
     testDir <- IO(testDirectory())
     baseDir = testDir / "%.0f".format(math.random() * 1_000_000)
     _ <- Files[IO].createDirectories(baseDir)
-    result = new EmptyDirectoryRemove[IO](
-      FsStoreConfig.default(baseDir).withMapping(mapping),
-      logger
+    result = EmptyDirectoryRemove[IO](
+      FsStoreConfig.default(baseDir).withMapping(mapping)
     )
   } yield result
 
@@ -39,10 +38,10 @@ class EmptyDirectoryRemoveTest extends CatsEffectSuite {
     for {
       subdirs <- IO("a/b/c")
       remover <- createEmptyDirRemove(pathMapping(subdirs))
-      _ <- Files[IO].createDirectories(remover.config.baseDir / subdirs)
+      _ <- Files[IO].createDirectories(remover.baseDir / subdirs)
       id <- BinaryId.random[IO]
       _ <- remover.removeEmptyDirs(id)
-      _ <- assertIO(isEmpty(remover.config.baseDir), true)
+      _ <- assertIO(isEmpty(remover.baseDir), true)
     } yield ()
   }
 
@@ -50,11 +49,11 @@ class EmptyDirectoryRemoveTest extends CatsEffectSuite {
     for {
       subdirs <- IO("a/b/c")
       remover <- createEmptyDirRemove(pathMapping(subdirs))
-      _ <- Files[IO].createDirectories(remover.config.baseDir / subdirs)
+      _ <- Files[IO].createDirectories(remover.baseDir / subdirs)
       id <- BinaryId.random[IO]
       tasks = List.fill(8)(remover.removeEmptyDirs(id))
       _ <- tasks.parSequence
-      _ <- assertIO(isEmpty(remover.config.baseDir), true)
+      _ <- assertIO(isEmpty(remover.baseDir), true)
     } yield ()
   }
 
@@ -62,12 +61,12 @@ class EmptyDirectoryRemoveTest extends CatsEffectSuite {
     for {
       subdirs <- IO("a/b/c")
       remover <- createEmptyDirRemove(pathMapping(subdirs))
-      _ <- Files[IO].createDirectories(remover.config.baseDir / subdirs)
-      _ <- Files[IO].createFile(remover.config.baseDir / "a" / "test.txt")
+      _ <- Files[IO].createDirectories(remover.baseDir / subdirs)
+      _ <- Files[IO].createFile(remover.baseDir / "a" / "test.txt")
       id <- BinaryId.random[IO]
       _ <- remover.removeEmptyDirs(id)
-      _ <- assertIO(Files[IO].exists(remover.config.baseDir / "a"), true)
-      _ <- assertIO(isEmpty(remover.config.baseDir / "a"), false)
+      _ <- assertIO(Files[IO].exists(remover.baseDir / "a"), true)
+      _ <- assertIO(isEmpty(remover.baseDir / "a"), false)
     } yield ()
   }
 }
