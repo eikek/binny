@@ -77,7 +77,7 @@ defines some settings, like the table name and chunk size to use.</p>
 <span class="c1">// someData: Binary[IO] = Stream(..)</span>
 <span class="k">val</span> <span class="nv">id</span> <span class="k">=</span> <span class="nv">someData</span><span class="o">.</span><span class="py">through</span><span class="o">(</span><span class="nv">store</span><span class="o">.</span><span class="py">insert</span><span class="o">)</span>
   <span class="o">.</span><span class="py">compile</span><span class="o">.</span><span class="py">lastOrError</span><span class="o">.</span><span class="py">unsafeRunSync</span><span class="o">()</span>
-<span class="c1">// id: BinaryId = BinaryId(6sGMZvEh897uHvTTrcTDBAp5vFN39mMHqmZN6USqgqX6)</span>
+<span class="c1">// id: BinaryId = BinaryId(8kAic6mb33RzWps9LAtHceyuhv74qmTonjdsVZEDpvK3)</span>
 
 <span class="c1">// get the file out</span>
 <span class="nv">store</span><span class="o">.</span><span class="py">findBinary</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="nv">ByteRange</span><span class="o">.</span><span class="py">All</span><span class="o">).</span><span class="py">getOrElse</span><span class="o">(</span><span class="nv">sys</span><span class="o">.</span><span class="py">error</span><span class="o">(</span><span class="s">"not found"</span><span class="o">))</span>
