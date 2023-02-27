@@ -6,7 +6,7 @@ import binny._
 import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
-import fs2.io.file.{Files, Flags, Path}
+import fs2.io.file._
 import fs2.{Pipe, Stream}
 
 private[fs] object Impl {
@@ -65,7 +65,11 @@ private[fs] object Impl {
       .getOrElse(SimpleContentType.octetStream)
 
   def delete[F[_]: Async](targetFile: Path): F[Boolean] =
-    Files[F].deleteIfExists(targetFile)
+    Files[F]
+      .deleteIfExists(targetFile)
+      .recover { case _: NoSuchFileException =>
+        true
+      }
 
   def deleteDir[F[_]: Async](dir: Path): F[Unit] =
     Files[F].exists(dir).flatMap {
