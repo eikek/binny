@@ -208,7 +208,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
   def getObjectAsStream(key: S3Key, chunkSize: Int, range: ByteRange): Binary[F] = {
     val input = getObject(key, range).map(a => a: InputStream)
     fs2.io
-      .unsafeReadInputStream(input, chunkSize, closeAfterUse = true)
+      .readInputStream(input, chunkSize, closeAfterUse = true)
       .mapChunks(c => Chunk.byteVector(c.toByteVector))
   }
 
@@ -223,7 +223,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       .redeemWith(decodeNotFoundAs(Option.empty[GetObjectResponse]), _.some.pure[F])
       .map(_.map { resp =>
         fs2.io
-          .unsafeReadInputStream(
+          .readInputStream(
             (resp: InputStream).pure[F],
             chunkSize,
             closeAfterUse = true

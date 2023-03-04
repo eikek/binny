@@ -21,6 +21,15 @@ object ExampleData {
       64 * 1024
     )
 
+  val logoPngAttr: BinaryAttributes =
+    BinaryAttributes(
+      ByteVector.fromValidHex(
+        "9dcc754fc5dd55f94431252f92348fc5ed76ad04133824dc08a7b4ec067b69cf"
+      ),
+      SimpleContentType.image("png"),
+      113186L
+    )
+
   val file2MAttr: BinaryAttributes =
     BinaryAttributes(
       ByteVector.fromValidHex(
@@ -48,6 +57,5 @@ object ExampleData {
 
     def readUtf8String =
       self.through(fs2.text.utf8.decode).compile.string
-
   }
 }

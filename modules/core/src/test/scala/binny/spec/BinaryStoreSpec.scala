@@ -51,6 +51,25 @@ trait BinaryStoreSpec[S <: BinaryStore[IO]] extends CatsEffectSuite with StreamA
       .drain
   }
 
+  test("consume stream with builder") {
+    val store = binStore
+    for {
+      id <- ExampleData.logoPng.through(store.insert).compile.lastOrError
+      bin <- store
+        .findBinary(id, ByteRange.All)
+        .getOrRaise(new Exception("file not found"))
+      // consuming via a mutable builder could sometimes lead to unexpected behavior
+      // depending on how the stream evaluates internally (i.e. when using
+      // fs2.io.unsafeReadInputStream)
+      sha <- bin.compile.to(ByteVector).map(_.sha256)
+      _ = assertEquals(
+        sha,
+        ExampleData.logoPngAttr.sha256,
+        s"checksum mismatch: got ${sha.toHex}, expected ${ExampleData.logoPngAttr.sha256.toHex}"
+      )
+    } yield ()
+  }
+
   test("load non existing id") {
     val store = binStore
     for {
