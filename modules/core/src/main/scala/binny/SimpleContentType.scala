@@ -18,11 +18,17 @@ final class SimpleContentType private (val contentType: String) extends AnyVal {
 }
 
 object SimpleContentType {
-  val octetStream: SimpleContentType =
-    new SimpleContentType("application/octet-stream")
+  def application(subtype: String): SimpleContentType =
+    SimpleContentType(s"application/$subtype")
 
-  val textPlain: SimpleContentType =
-    new SimpleContentType("text/plain")
+  def text(subtype: String): SimpleContentType =
+    SimpleContentType(s"text/$subtype")
+
+  def image(subtype: String): SimpleContentType =
+    SimpleContentType(s"image/$subtype")
+
+  val octetStream: SimpleContentType = application("octet-stream")
+  val textPlain: SimpleContentType = text("plain")
 
   def apply(ct: String): SimpleContentType =
     if (ct.trim.isEmpty) octetStream

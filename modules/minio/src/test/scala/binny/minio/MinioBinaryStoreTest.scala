@@ -9,7 +9,7 @@ class MinioBinaryStoreTest
 
   java.util.logging.Logger
     .getLogger(classOf[okhttp3.OkHttpClient].getName)
-    .setLevel(java.util.logging.Level.FINE);
+    .setLevel(java.util.logging.Level.FINE)
 
   val testContext: Fixture[TestContext[MinioBinaryStore[IO]]] =
     ResourceSuiteLocalFixture(
