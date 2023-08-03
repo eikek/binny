@@ -5,9 +5,10 @@ import binny.util.Logger
 import cats.effect._
 import cats.syntax.all._
 import fs2.Stream
+import fs2.io.file.Files
 import scodec.bits.ByteVector
 
-final class FsChunkedBinaryStoreWithCleanup[F[_]: Async: Logger] private (
+final class FsChunkedBinaryStoreWithCleanup[F[_]: Async: Files: Logger] private (
     val underlying: FsChunkedBinaryStore[F],
     private[fs] val sync: InsertDeleteSync[F]
 ) extends ChunkedBinaryStore[F] {
@@ -47,12 +48,12 @@ final class FsChunkedBinaryStoreWithCleanup[F[_]: Async: Logger] private (
 
 object FsChunkedBinaryStoreWithCleanup {
 
-  def apply[F[_]: Async: Logger](
+  def apply[F[_]: Async: Files: Logger](
       fs: FsChunkedBinaryStore[F]
   ): F[FsChunkedBinaryStoreWithCleanup[F]] =
     InsertDeleteSync[F].map(new FsChunkedBinaryStoreWithCleanup[F](fs, _))
 
-  def apply[F[_]: Async: Logger](
+  def apply[F[_]: Async: Files: Logger](
       config: FsChunkedStoreConfig
   ): F[FsChunkedBinaryStoreWithCleanup[F]] =
     apply(FsChunkedBinaryStore(Logger[F], config))

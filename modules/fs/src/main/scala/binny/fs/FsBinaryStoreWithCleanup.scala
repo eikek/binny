@@ -5,6 +5,7 @@ import binny.util.Logger
 import cats.effect._
 import cats.syntax.all._
 import fs2.Stream
+import fs2.io.file.Files
 
 /** A variant of [[FsBinaryStore]] that will cleanup empty directories that could be left
   * when deleting files.
@@ -13,7 +14,7 @@ import fs2.Stream
   * file, both operations are run sequentially. With this class there should be only one
   * store working on the same base directory!
   */
-final class FsBinaryStoreWithCleanup[F[_]: Async: Logger] private (
+final class FsBinaryStoreWithCleanup[F[_]: Async: Files: Logger] private (
     val underlying: FsBinaryStore[F],
     private[fs] val sync: InsertDeleteSync[F]
 ) extends BinaryStore[F] {
@@ -47,10 +48,12 @@ final class FsBinaryStoreWithCleanup[F[_]: Async: Logger] private (
 
 object FsBinaryStoreWithCleanup {
 
-  def apply[F[_]: Async: Logger](fs: FsBinaryStore[F]): F[FsBinaryStoreWithCleanup[F]] =
+  def apply[F[_]: Async: Files: Logger](
+      fs: FsBinaryStore[F]
+  ): F[FsBinaryStoreWithCleanup[F]] =
     InsertDeleteSync[F].map(new FsBinaryStoreWithCleanup(fs, _))
 
-  def apply[F[_]: Async: Logger](
+  def apply[F[_]: Async: Files: Logger](
       config: FsStoreConfig
   ): F[FsBinaryStoreWithCleanup[F]] =
     apply(FsBinaryStore(config, Logger[F]))
