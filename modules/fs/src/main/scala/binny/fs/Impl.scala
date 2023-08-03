@@ -11,7 +11,7 @@ import fs2.{Pipe, Stream}
 
 private[fs] object Impl {
 
-  def write[F[_]: Async](
+  def write[F[_]: Async: Files](
       targetFile: Path,
       overwriteMode: OverwriteMode
   ): Pipe[F, Byte, Nothing] =
@@ -40,7 +40,7 @@ private[fs] object Impl {
             bytes.through(Files[F].writeAll(targetFile))
       }
 
-  def load[F[_]: Async](
+  def load[F[_]: Async: Files](
       targetFile: Path,
       range: ByteRange,
       chunkSize: Int
@@ -59,19 +59,23 @@ private[fs] object Impl {
         None
     })
 
-  def detectContentType[F[_]: Async](file: Path, detect: ContentTypeDetect, hint: Hint) =
+  def detectContentType[F[_]: Async: Files](
+      file: Path,
+      detect: ContentTypeDetect,
+      hint: Hint
+  ) =
     load(file, ByteRange.Chunk(0, 50), 50)
       .semiflatMap(_.through(detect.detectStream(hint)).compile.lastOrError)
       .getOrElse(SimpleContentType.octetStream)
 
-  def delete[F[_]: Async](targetFile: Path): F[Boolean] =
+  def delete[F[_]: Async: Files](targetFile: Path): F[Boolean] =
     Files[F]
       .deleteIfExists(targetFile)
       .recover { case _: NoSuchFileException =>
         true
       }
 
-  def deleteDir[F[_]: Async](dir: Path): F[Unit] =
+  def deleteDir[F[_]: Async: Files](dir: Path): F[Unit] =
     Files[F].exists(dir).flatMap {
       case true =>
         Files[F].deleteRecursively(dir)
@@ -79,7 +83,7 @@ private[fs] object Impl {
         ().pure[F]
     }
 
-  def writeAttrs[F[_]: Async](file: Path, attrs: BinaryAttributes): F[Unit] =
+  def writeAttrs[F[_]: Async: Files](file: Path, attrs: BinaryAttributes): F[Unit] =
     (Stream
       .eval(file.parent.map(Files[F].createDirectories).getOrElse(().pure[F]))
       .drain ++
@@ -88,7 +92,7 @@ private[fs] object Impl {
         .through(fs2.text.utf8.encode)
         .through(Files[F].writeAll(file))).compile.drain
 
-  def loadAttrs[F[_]: Async](file: Path): OptionT[F, BinaryAttributes] =
+  def loadAttrs[F[_]: Async: Files](file: Path): OptionT[F, BinaryAttributes] =
     OptionT(Files[F].exists(file).flatMap {
       case true =>
         Files[F]

@@ -13,7 +13,7 @@ import scodec.bits.ByteVector
 /** Stores binaries in chunks in the filesystem. When reading all available chunks are
   * concatenated.
   */
-class FsChunkedBinaryStore[F[_]: Async](
+class FsChunkedBinaryStore[F[_]: Async: Files](
     val config: FsChunkedStoreConfig,
     logger: Logger[F]
 ) extends ChunkedBinaryStore[F] {
@@ -181,12 +181,15 @@ class FsChunkedBinaryStore[F[_]: Async](
 object FsChunkedBinaryStore {
   private[fs] def fileName(n: Int): String = f"chunk_$n%08d"
 
-  def apply[F[_]: Async](
+  def apply[F[_]: Async: Files](
       logger: Logger[F],
       config: FsChunkedStoreConfig
   ): FsChunkedBinaryStore[F] =
     new FsChunkedBinaryStore[F](config, logger)
 
-  def default[F[_]: Async](logger: Logger[F], baseDir: Path): FsChunkedBinaryStore[F] =
+  def default[F[_]: Async: Files](
+      logger: Logger[F],
+      baseDir: Path
+  ): FsChunkedBinaryStore[F] =
     apply(logger, FsChunkedStoreConfig.defaults(baseDir))
 }

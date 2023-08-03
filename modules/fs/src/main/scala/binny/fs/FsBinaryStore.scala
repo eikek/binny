@@ -9,7 +9,7 @@ import fs2.Pipe
 import fs2.Stream
 import fs2.io.file.{Files, Path}
 
-final class FsBinaryStore[F[_]: Async](
+final class FsBinaryStore[F[_]: Async: Files](
     val config: FsStoreConfig,
     logger: Logger[F]
 ) extends BinaryStore[F] {
@@ -85,18 +85,18 @@ final class FsBinaryStore[F[_]: Async](
 }
 
 object FsBinaryStore {
-  def apply[F[_]: Async](
+  def apply[F[_]: Async: Files](
       config: FsStoreConfig,
       logger: Logger[F]
   ): FsBinaryStore[F] =
     new FsBinaryStore[F](config, logger)
 
-  def apply[F[_]: Async](
+  def apply[F[_]: Async: Files](
       logger: Logger[F],
       storeCfg: FsStoreConfig
   ): FsBinaryStore[F] =
     new FsBinaryStore[F](storeCfg, logger)
 
-  def default[F[_]: Async](logger: Logger[F], baseDir: Path): FsBinaryStore[F] =
+  def default[F[_]: Async: Files](logger: Logger[F], baseDir: Path): FsBinaryStore[F] =
     apply(logger, FsStoreConfig.default(baseDir))
 }
