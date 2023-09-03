@@ -211,7 +211,7 @@ object BinaryStoreSpec {
       Stream
         .eval(IO {
           val n = counter.getAndIncrement()
-          Chunk.vector(Vector.fill(chunkSize)(n.toByte))
+          Chunk.from(Vector.fill(chunkSize)(n.toByte))
         })
         .repeatN(length)
         .flatMap(Stream.chunk)
@@ -219,7 +219,7 @@ object BinaryStoreSpec {
     val sha256 =
       Stream
         .range(0, length)
-        .flatMap(n => Stream.chunk(Chunk.vector(Vector.fill(chunkSize)(n.toByte))))
+        .flatMap(n => Stream.chunk(Chunk.from(Vector.fill(chunkSize)(n.toByte))))
         .through(fs2.hash.sha256)
         .to(ByteVector)
 
