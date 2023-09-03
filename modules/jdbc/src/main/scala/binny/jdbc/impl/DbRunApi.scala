@@ -85,7 +85,7 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
         val buffer = ListBuffer.empty[BinaryId]
         while (resultSet.next() && buffer.size < chunkSize)
           buffer += BinaryId(resultSet.getString(1))
-        Chunk.seq(buffer)
+        Chunk.from(buffer)
       }
 
     DbRun

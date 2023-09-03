@@ -24,7 +24,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
   def listBuckets(): Stream[F, String] =
     Stream
       .eval(future(client.listBuckets()))
-      .flatMap(jl => Stream.chunk(Chunk.iterable(jl.asScala)))
+      .flatMap(jl => Stream.chunk(Chunk.from(jl.asScala)))
       .map(_.name())
 
   def listObjects(
@@ -45,7 +45,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
         prefix.foreach(args.prefix)
 
         val result = client.listObjects(args.build())
-        val ch = Chunk.iterable(result.asScala.map(_.get.objectName))
+        val ch = Chunk.from(result.asScala.map(_.get.objectName))
         (
           if (ch.isEmpty) Stream.empty else Stream.chunk(ch),
           ch.last.filter(_ => ch.size == maxKeys)
@@ -209,7 +209,6 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
     val input = getObject(key, range).map(a => a: InputStream)
     fs2.io
       .readInputStream(input, chunkSize, closeAfterUse = true)
-      .mapChunks(c => Chunk.byteVector(c.toByteVector))
   }
 
   // Note: this method is not safe to use when the resulting stream is unused!

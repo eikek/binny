@@ -14,10 +14,10 @@ class RangeCalcTest extends FunSuite {
     assertEquals(offsets.dropStart, 24)
     assertEquals(offsets.takeEnd, 120)
 
-    val chunk = Chunk.vector(Vector.range(0, 200).map(_.toByte))
+    val chunk = Chunk.from(Vector.range(0, 200).map(_.toByte))
     val ch = RangeCalc.chop(chunk, offsets, 0)
     assertEquals(ch.size, 120)
-    assertEquals(ch, Chunk.vector(Vector.range(24, 144).map(_.toByte)))
+    assertEquals(ch, Chunk.from(Vector.range(24, 144).map(_.toByte)))
   }
 
   test("multiple chunks, first and last partial") {
@@ -28,7 +28,7 @@ class RangeCalcTest extends FunSuite {
     assertEquals(offsets.dropStart, 5)
     assertEquals(offsets.takeEnd, 5)
 
-    val chunk = Chunk.vector(Vector.range(0, 15).map(_.toByte))
+    val chunk = Chunk.from(Vector.range(0, 15).map(_.toByte))
 
     val fc = RangeCalc.chop(chunk, offsets, offsets.firstChunk)
     assertEquals(fc.size, 10)
@@ -48,7 +48,7 @@ class RangeCalcTest extends FunSuite {
     assertEquals(offsets.dropStart, 0)
     assertEquals(offsets.takeEnd, 0)
 
-    val chunk = Chunk.vector(Vector.range(0, 20).map(_.toByte))
+    val chunk = Chunk.from(Vector.range(0, 20).map(_.toByte))
 
     val fc = RangeCalc.chop(chunk, offsets, offsets.firstChunk)
     assertEquals(fc, chunk)
@@ -65,7 +65,7 @@ class RangeCalcTest extends FunSuite {
     assertEquals(offsets.dropStart, 0)
     assertEquals(offsets.takeEnd, 10)
 
-    val chunk = Chunk.vector(Vector.range(0, 20).map(_.toByte))
+    val chunk = Chunk.from(Vector.range(0, 20).map(_.toByte))
     val fc = RangeCalc.chop(chunk, offsets, offsets.firstChunk)
     assertEquals(fc.size, 10)
   }
