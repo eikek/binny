@@ -13,7 +13,7 @@ object Dependencies {
   val tikaVersion = "2.9.1"
   val icu4jVersion = "69.1"
   val kindProjectorVersion = "0.10.3"
-  val minioVersion = "8.5.6"
+  val minioVersion = "8.5.7"
 
   val minio = Seq(
     "io.minio" % "minio" % minioVersion
