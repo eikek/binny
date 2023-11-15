@@ -6,6 +6,7 @@ final case class MinioConfig(
     endpoint: String,
     accessKey: String,
     secretKey: String,
+    region: Option[String],
     keyMapping: S3KeyMapping,
     chunkSize: Int,
     partSize: Int,
@@ -21,7 +22,7 @@ final case class MinioConfig(
     copy(keyMapping = km)
 
   override def toString: String =
-    s"S3Config(endpoint=$endpoint, accessKey=$accessKey, secretKey=***)"
+    s"S3Config(endpoint=$endpoint, accessKey=$accessKey, region=$region, secretKey=***)"
 }
 
 object MinioConfig {
@@ -35,6 +36,7 @@ object MinioConfig {
       endpoint,
       accessKey,
       secretKey,
+      None,
       km,
       256 * 1024,
       8 * 1024 * 1024,
