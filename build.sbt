@@ -51,9 +51,6 @@ val sharedSettings = Seq(
     if (scalaBinaryVersion.value == "3") Nil
     else List(compilerPlugin(Dependencies.kindProjectorPlugin))
   },
-  Compile / packageDoc / publishArtifact := {
-    scalaBinaryVersion.value != "3" // deactivate when typelevel/fs2#3293 is resolved
-  },
   crossScalaVersions := Seq(scala213, scala3),
   Compile / console / scalacOptions := Seq(),
   licenses := Seq("MIT" -> url("http://spdx.org/licenses/MIT")),
