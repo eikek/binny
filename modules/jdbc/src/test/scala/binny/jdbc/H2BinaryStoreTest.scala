@@ -3,6 +3,8 @@ package binny.jdbc
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
 
+import scala.collection.immutable.Seq
+
 import binny.util.Logger
 import cats.effect._
 

@@ -1,5 +1,7 @@
 package binny.pglo
 
+import scala.collection.immutable.Seq
+
 import binny.BinaryStore
 import binny.jdbc.SwapFind
 import binny.spec.BinaryStoreSpec
