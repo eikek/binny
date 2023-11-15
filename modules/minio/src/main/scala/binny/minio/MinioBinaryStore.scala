@@ -113,6 +113,7 @@ object MinioBinaryStore {
       MinioAsyncClient
         .builder()
         .endpoint(config.endpoint)
+        .region(config.region.orNull)
         .credentials(config.accessKey, config.secretKey)
         .build(),
       logger
