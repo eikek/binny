@@ -2,7 +2,7 @@ import com.github.sbt.git.SbtGit.GitKeys._
 
 val scala212 = "2.12.17"
 val scala213 = "2.13.12"
-val scala3 = "3.3.0"
+val scala3 = "3.3.1"
 
 addCommandAlias("ci", "lint; +test; microsite/mdoc; +publishLocal")
 addCommandAlias(
@@ -108,8 +108,7 @@ val buildInfoSettings = Seq(
 
 val scalafixSettings = Seq(
   semanticdbEnabled := true, // enable SemanticDB
-  semanticdbVersion := scalafixSemanticdb.revision, // use Scalafix compatible version
-  ThisBuild / scalafixDependencies ++= Dependencies.organizeImports
+  semanticdbVersion := scalafixSemanticdb.revision // use Scalafix compatible version
 )
 
 lazy val core = project

@@ -1,5 +1,7 @@
 package binny.fs
 
+import scala.collection.immutable.Seq
+
 import binny.spec.BinaryStoreSpec
 import binny.util.Logger
 import cats.effect._

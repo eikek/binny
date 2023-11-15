@@ -2,6 +2,8 @@ package binny.jdbc
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.collection.immutable.Seq
+
 import binny.util.Logger
 import cats.effect._
 

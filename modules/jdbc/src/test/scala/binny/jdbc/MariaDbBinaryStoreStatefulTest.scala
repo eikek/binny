@@ -1,5 +1,7 @@
 package binny.jdbc
 
+import scala.collection.immutable.Seq
+
 import binny.BinaryStore
 import binny.spec.BinaryStoreSpec
 import binny.util.Logger
