@@ -106,7 +106,8 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
             val buffer = new Array[Byte](32)
             javaStream.mark(65)
             val read = javaStream.read(buffer)
-            val ret = detect.detect(ByteVector.view(buffer, 0, read), Hint.none)
+            val ret =
+              detect.detect(ByteVector.view(buffer, 0, read), Hint.filename(key.asPath))
             javaStream.reset()
             ret
           } else SimpleContentType.octetStream
@@ -128,7 +129,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       detect: ContentTypeDetect,
       in: ByteVector
   ): F[ObjectWriteResponse] = {
-    val ct = detect.detect(in, Hint.none)
+    val ct = detect.detect(in, Hint.filename(key.asPath))
     val args = new PutObjectArgs.Builder()
       .bucket(key.bucket)
       .`object`(key.objectName)
@@ -194,14 +195,15 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       _.some.pure[F]
     )
 
-  def isNotFound(ex: Throwable): Boolean =
+  @annotation.tailrec
+  private def isNotFound(ex: Throwable): Boolean =
     ex match {
       case e: ErrorResponseException if e.response().code() == 404 => true
       case e: CompletionException => isNotFound(e.getCause)
       case _                      => false
     }
 
-  def decodeNotFoundAs[A](defaultValue: => A)(ex: Throwable): F[A] =
+  private def decodeNotFoundAs[A](defaultValue: => A)(ex: Throwable): F[A] =
     if (isNotFound(ex)) Sync[F].pure(defaultValue)
     else Sync[F].raiseError(ex)
 

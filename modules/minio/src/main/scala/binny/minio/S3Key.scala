@@ -12,6 +12,8 @@ final case class S3Key(bucket: String, objectName: String) {
 
   def changeBucket(f: String => String): S3Key =
     copy(bucket = f(bucket))
+
+  def asPath: String = s"$bucket/$objectName"
 }
 
 object S3Key {
