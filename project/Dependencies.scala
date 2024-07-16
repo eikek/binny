@@ -5,7 +5,7 @@ object Dependencies {
   val fs2Version = "3.9.4"
   val h2Version = "2.3.230"
   val munitVersion = "0.7.29"
-  val munitCatsEffectVersion = "1.0.7"
+  val munitCatsEffectVersion = "2.0.0"
   val mariaDbVersion = "3.4.0"
   val postgresVersion = "42.7.3"
   val slf4jVersion = "2.0.13"
@@ -35,7 +35,7 @@ object Dependencies {
 
   // https://github.com/typelevel/munit-cats-effect
   val munitCatsEffect = Seq(
-    "org.typelevel" %% "munit-cats-effect-3" % munitCatsEffectVersion
+    "org.typelevel" %% "munit-cats-effect" % munitCatsEffectVersion
   )
 
   val fs2 = Seq(
