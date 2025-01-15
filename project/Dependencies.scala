@@ -6,13 +6,13 @@ object Dependencies {
   val h2Version = "2.3.232"
   val munitVersion = "0.7.29"
   val munitCatsEffectVersion = "1.0.7"
-  val mariaDbVersion = "3.5.0"
-  val postgresVersion = "42.7.4"
+  val mariaDbVersion = "3.5.1"
+  val postgresVersion = "42.7.5"
   val slf4jVersion = "2.0.13"
   val tikaVersion = "3.0.0"
   val icu4jVersion = "69.1"
   val kindProjectorVersion = "0.10.3"
-  val minioVersion = "8.5.13"
+  val minioVersion = "8.5.15"
 
   val minio = Seq(
     "io.minio" % "minio" % minioVersion
