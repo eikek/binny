@@ -20,7 +20,7 @@ object ByteRange {
   final case class Chunk(offset: Long, length: Int) extends ByteRange {
     val asString = s"$offset,$length"
     def includes(other: ByteRange) = other match {
-      case All => offset == 0 && length == Long.MaxValue
+      case All             => offset == 0 && length == Long.MaxValue
       case Chunk(off, len) =>
         off >= offset && len <= length
     }

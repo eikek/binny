@@ -224,7 +224,7 @@ final class DbRunApi[F[_]: Sync](table: String, logger: Logger[F]) {
   ): DbRun[Stream[F, *], Byte] = {
     def readRow(rs: ResultSet, offsets: Offsets): F[Chunk[Byte]] =
       Sync[F].blocking(if (rs.next) Option(rs.getBytes(1)) else None).map {
-        case None => Chunk.empty
+        case None      => Chunk.empty
         case Some(buf) =>
           val ch = Chunk.array(buf)
           if (offsets.isNone) ch
