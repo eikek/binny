@@ -80,7 +80,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
 
   def makeBucketIfMissing(name: String): F[Unit] =
     bucketExists(name).flatMap {
-      case true => ().pure[F]
+      case true  => ().pure[F]
       case false =>
         makeBucket(name).attempt.flatMap {
           case Right(n) => n.pure[F]
@@ -176,7 +176,7 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
       .`object`(key.objectName)
 
     val args = range match {
-      case ByteRange.All => aargs.build()
+      case ByteRange.All                   => aargs.build()
       case ByteRange.Chunk(offset, length) =>
         val ao = if (offset > 0) aargs.offset(offset) else aargs
         val lo =

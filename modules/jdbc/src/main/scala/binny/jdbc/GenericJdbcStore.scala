@@ -77,7 +77,7 @@ object GenericJdbcStore {
         data.length.toInt
       ) match {
         case Some(bad) => bad.pure[F]
-        case None =>
+        case None      =>
           val len = data.length
           val ch = chunkDef.fold(identity, _.toTotal(config.chunkSize))
           val insert = dataApi

@@ -22,7 +22,7 @@ final private[fs] class InsertDeleteSync[F[_]: Async](
 
   private def acquireDelete: F[Unit] =
     state.modify(_.incDelete).flatMap {
-      case true => ().pure[F]
+      case true  => ().pure[F]
       case false =>
         state.waitUntil(_.noInsertRunning) *> acquireDelete
     }

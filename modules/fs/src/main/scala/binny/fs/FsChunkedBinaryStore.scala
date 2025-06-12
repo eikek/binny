@@ -27,7 +27,7 @@ class FsChunkedBinaryStore[F[_]: Async: Files](
   ): F[InsertChunkResult] =
     InsertChunkResult.validateChunk(chunkDef, config.chunkSize, data.length.toInt) match {
       case Some(bad) => bad.pure[F]
-      case None =>
+      case None      =>
         val ch = chunkDef.fold(identity, _.toTotal(config.chunkSize))
         val chunkFileName = FsChunkedBinaryStore.fileName(ch.index)
         val file = config.targetDir(id) / chunkFileName
