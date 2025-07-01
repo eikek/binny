@@ -79,7 +79,7 @@ object StackedBinaryStore {
   ): BinaryStore[F] =
     stack.tail match {
       case Nil => stack.head
-      case _ =>
+      case _   =>
         new StackedBinaryStore[F](
           logger,
           stack,
