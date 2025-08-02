@@ -81,7 +81,7 @@ object CopyTool {
             logger.trace(s"Copying ${id.id} …") *>
               data.through(to.insertWith(id)).compile.drain.attempt.flatMap {
                 case Right(()) => Counter.success.pure[F]
-                case Left(ex) =>
+                case Left(ex)  =>
                   logger
                     .error(ex)(s"Error storing file '$id'")
                     .as(Counter.failed(id))
