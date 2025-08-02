@@ -35,7 +35,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
   ) =
     InsertChunkResult.validateChunk(chunkDef, config.chunkSize, data.length.toInt) match {
       case Some(bad) => bad.pure[F]
-      case None =>
+      case None      =>
         val ch = chunkDef.fold(identity, _.toTotal(config.chunkSize))
         val s3Key =
           config.keyMapping.makeS3Key(id).changeObjectName(n => objectName(n, ch.index))
@@ -105,7 +105,7 @@ final class MinioChunkedBinaryStore[F[_]: Async](
   def findBinary(id: BinaryId, range: ByteRange): OptionT[F, Binary[F]] = {
     val list = listChunks(id, max = 2).take(2).compile.toList
     OptionT.liftF(list).flatMap {
-      case Nil => OptionT.none[F, Binary[F]]
+      case Nil         => OptionT.none[F, Binary[F]]
       case name :: Nil =>
         val key = S3Key(keyMapping.makeS3Key(id).bucket, name)
         OptionT.pure(minio.getObjectAsStream(key, config.chunkSize, range))
