@@ -251,10 +251,12 @@ final private[minio] class Minio[F[_]: Async](client: MinioAsyncClient) {
         val buf = new Array[Byte](chunkSize)
         var read = -1
         Using.resource(resp) { rr =>
-          while ({
-            read = rr.read(buf)
-            read
-          } > 0) {
+          while (
+            {
+              read = rr.read(buf)
+              read
+            } > 0
+          ) {
             md.update(buf, 0, read)
             len = len + read
             if (ct.isEmpty) {
